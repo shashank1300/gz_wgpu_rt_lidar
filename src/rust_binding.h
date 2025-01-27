@@ -48,7 +48,7 @@ struct RtScene;
 
 RtScene* create_rt_scene(RtRuntime* rt_runtime, RtSceneBuilder* rt_scene_builder);
 
-void set_transform(RtScene* rt_scene, RtRuntime* rt_runtime, RtSceneUpdate* rt_scene_update);
+void set_transforms(RtScene* rt_scene, RtRuntime* rt_runtime, RtSceneUpdate* rt_scene_update);
 
 void free_rt_scene(RtScene* rt_scene);
 

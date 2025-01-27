@@ -317,7 +317,7 @@ pub extern "C" fn create_rt_scene(runtime: *mut RtRuntime, builder: *mut RtScene
 }
 
 #[no_mangle]
-pub extern "C" fn set_transform(ptr: *mut RtScene, device: *mut RtRuntime, updates: *mut RtSceneUpdate) {
+pub extern "C" fn set_transforms(ptr: *mut RtScene, device: *mut RtRuntime, updates: *mut RtSceneUpdate) {
     let scene = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -373,11 +373,7 @@ pub struct RtDepthCamera {
 }
 
 #[no_mangle]
-pub extern "C" fn create_rt_depth_camera(scene: *mut RtScene, runtime: *mut RtRuntime, width: u32, height: u32, fov: f32) -> *mut RtDepthCamera {
-    let scene = unsafe {
-        assert!(!scene.is_null());
-        &mut *scene
-    };
+pub extern "C" fn create_rt_depth_camera(runtime: *mut RtRuntime, width: u32, height: u32, fov: f32) -> *mut RtDepthCamera {
 
     let runtime = unsafe {
         assert!(!runtime.is_null());
@@ -413,6 +409,7 @@ pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, run
     };
 
     let res = futures::executor::block_on(camera.camera.render_depth_camera(&scene.scene, &runtime.device, &runtime.queue, view.view));
+    println!("Res {:?}", res);
 }
 
 #[no_mangle]
