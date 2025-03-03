@@ -7,6 +7,7 @@
 #include <gz/sim/components/Geometry.hh>
 #include <gz/sim/components/Visual.hh>
 #include <gz/sim/System.hh>
+#include <gz/sim/Util.hh>
 
 #include <gz/transport/Node.hh>
 
@@ -99,7 +100,16 @@ namespace wgpu_sensor {
       add_mesh_vertex(mesh, -bmesh->Size().X()/2, -bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
       add_mesh_vertex(mesh, bmesh->Size().X()/2, -bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
       
-      for (auto x =0; x < 21; x++) {
+
+      uint16_t indices[] = {
+        0, 1, 2, 2, 3, 0, // top
+        4, 5, 6, 6, 7, 4, // bottom
+        8, 9, 10, 10, 11, 8, // right
+        12, 13, 14, 14, 15, 12, // left
+        16, 17, 18, 18, 19, 16, // front
+        20, 21, 22, 22, 23, 20, // back
+      };
+      for (auto x: indices) {
         add_mesh_face(mesh, x);
       }
       return mesh;
@@ -119,20 +129,18 @@ namespace wgpu_sensor {
 
   void WGPURtSensor::PostUpdate(const gz::sim::UpdateInfo &_info,
                                const gz::sim::EntityComponentManager &_ecm) {
-    gzmsg << "WGPURtSensor::PreUpdate" << std::endl;
-
+    using std::chrono::high_resolution_clock;
     if (_info.paused) {
       return;
     }
 
     if( this->rt_scene == nullptr) {
-      gzerr << "Creating scene" << std::endl;
       auto rt_scene_builder = create_rt_scene_builder();
        _ecm.Each<gz::sim::components::Visual, gz::sim::components::Geometry>
               ([this, &rt_scene_builder, &_ecm](auto& entity, auto&& visual, auto&& geometry) {
                   auto geom = geometry->Data();
                   auto model = convertSDFModelToWGPU(geom);
-                  if (model)
+                  if (model != nullptr)
                   {
                     auto mesh_id = add_mesh(rt_scene_builder, model);
                     auto pose = _ecm.Component<gz::sim::components::Pose>(entity);
@@ -140,11 +148,16 @@ namespace wgpu_sensor {
                       gzmsg << "No pose component found for entity " << entity << std::endl;
                       return true;
                     }
+                   
                     auto instance = create_instance_wrapper(mesh_id, pose->Data().Pos().X(), pose->Data().Pos().Y(), pose->Data().Pos().Z(), pose->Data().Rot().X(), pose->Data().Rot().Y(), pose->Data().Rot().Z(), pose->Data().Rot().W());
                     auto inst_id = add_instance(rt_scene_builder, instance);
                     free_instance_wrapper(instance);
+                    gzerr << "Creating instance " << inst_id << "For entity" <<  entity << "With pose" << pose << std::endl;
                     gz_entity_to_rt_instance[entity] = inst_id;
                     free_mesh(model);
+                  }
+                  else {
+                    gzerr << "Model geometry for" << entity << "  not supported" << std::endl;
                   }
                   return true;
               });
@@ -155,36 +168,31 @@ namespace wgpu_sensor {
   
 
     else {
+      high_resolution_clock::time_point t1 = high_resolution_clock::now();
       auto rt_scene_update = create_rt_scene_update();
       _ecm.Each<gz::sim::components::Visual, gz::sim::components::Geometry>
             ([this, &rt_scene_update, &_ecm](auto& entity, auto&& visual, auto&& geometry) {
-        auto pose = _ecm.Component<gz::sim::components::Pose>(entity);
-        if (!pose) {
-          gzmsg << "No pose component found for entity " << entity << std::endl;
+        auto pose = gz::sim::worldPose(entity, _ecm);
+        /*if (!pose) {
+          gzerr << "No pose component found for entity " << entity << std::endl;
           return true;
-        }
+        }*/
+
         auto instance_handle = gz_entity_to_rt_instance.find(entity);
         if (instance_handle == gz_entity_to_rt_instance.end()) {
-          gzmsg << "No instance found for entity " << entity << std::endl;
+          gzerr << "No instance found for entity " << entity << std::endl;
           return true;
         }
-        gzerr << "Creating instance " << instance_handle->second << std::endl;
         auto instance = 
           create_instance_wrapper(instance_handle->second, 
-            pose->Data().Pos().X(), pose->Data().Pos().Y(), pose->Data().Pos().Z(),
-            pose->Data().Rot().X(), pose->Data().Rot().Y(), pose->Data().Rot().Z(), pose->Data().Rot().W());
-        
-        gzerr << "Updating instance " << instance_handle->second << std::endl;
+            pose.Pos().X(), pose.Pos().Y(), pose.Pos().Z(),
+            pose.Rot().X(), pose.Rot().Y(), pose.Rot().Z(), pose.Rot().W());
 
         add_update(rt_scene_update, instance, instance_handle->second);
-        
-        gzerr << "Freeing instance" << std::endl;
         free_instance_wrapper(instance);
-
         return true;
       });
 
-      gzerr << "Setting transforms" << std::endl;
       set_transforms(rt_scene, rt_runtime, rt_scene_update);
 
       auto camera_pose = _ecm.Component<gz::sim::components::Pose>(camera_entity);
@@ -195,6 +203,10 @@ namespace wgpu_sensor {
       auto view_matrix = create_view_matrix(camera_pose->Data().Pos().X(), camera_pose->Data().Pos().Y(), camera_pose->Data().Pos().Z(), camera_pose->Data().Rot().X(), camera_pose->Data().Rot().Y(), camera_pose->Data().Rot().Z(), camera_pose->Data().Rot().W());
       render_depth(rt_depth_camera, rt_scene, rt_runtime, view_matrix);
       free_rt_scene_update(rt_scene_update);
+      free_view_matrix(view_matrix);
+      high_resolution_clock::time_point t2 = high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
+      gzmsg << "Time taken to render depth: " << duration << std::endl;
     }
     
   }

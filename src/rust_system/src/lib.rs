@@ -1,6 +1,6 @@
 use glam::{Affine3A, Mat3A, Quat, Vec3A};
 use wgpu::Device;
-use wgpu_rt_lidar::{vertex, AssetMesh, Instance, Vertex};
+use wgpu_rt_lidar::{utils::create_cube, vertex, AssetMesh, Instance, Vertex};
 
 #[no_mangle]
 pub extern "C" fn create_mesh() -> *mut Mesh {
@@ -289,7 +289,8 @@ pub extern "C" fn free_rt_scene_update(ptr: *mut RtSceneUpdate)
 
 #[repr(C)]
 pub struct RtScene {
-    scene: wgpu_rt_lidar::RayTraceScene
+    scene: wgpu_rt_lidar::RayTraceScene,
+    rec: rerun::RecordingStream
 }
 
 #[no_mangle]
@@ -309,10 +310,12 @@ pub extern "C" fn create_rt_scene(runtime: *mut RtRuntime, builder: *mut RtScene
         wgpu_rt_lidar::RayTraceScene::new(
             &runtime.device, 
             &runtime.queue, 
-            &builder.meshes.iter().map(|m| AssetMesh {vertex_buf: m.vertices.clone(), index_buf: m.faces.clone()}).collect::<Vec<AssetMesh>>(),
+            &builder.meshes.iter().map(|m| 
+                AssetMesh {vertex_buf: m.vertices.clone(), index_buf: m.faces.clone()}).collect::<Vec<AssetMesh>>(),
             &builder.instances));
     Box::into_raw(Box::new(RtScene {
-        scene
+        scene,
+        rec: rerun::RecordingStreamBuilder::new("debug_viz").spawn().unwrap()
     }))
 }
 
@@ -330,7 +333,7 @@ pub extern "C" fn set_transforms(ptr: *mut RtScene, device: *mut RtRuntime, upda
         assert!(!updates.is_null());
         &mut *updates
     };
-    scene.scene.set_transform(&device.device, &device.queue, &updates.updates, &updates.indices);
+    futures::executor::block_on(scene.scene.set_transform(&device.device, &device.queue, &updates.updates, &updates.indices));
 }
 
 #[no_mangle]
@@ -380,7 +383,7 @@ pub extern "C" fn create_rt_depth_camera(runtime: *mut RtRuntime, width: u32, he
         &mut *runtime
     };
 
-    let camera = wgpu_rt_lidar::depth_camera::DepthCamera::new(&runtime.device, width, height, fov);
+    let camera = wgpu_rt_lidar::depth_camera::DepthCamera::new(&runtime.device, width, height, fov, 50.0);
     Box::into_raw(Box::new(RtDepthCamera {
         camera: futures::executor::block_on(camera)
     }))
@@ -408,8 +411,8 @@ pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, run
         &mut *view
     };
 
+    scene.scene.visualize(&scene.rec);
     let res = futures::executor::block_on(camera.camera.render_depth_camera(&scene.scene, &runtime.device, &runtime.queue, view.view));
-    println!("Res {:?}", res);
 }
 
 #[no_mangle]
