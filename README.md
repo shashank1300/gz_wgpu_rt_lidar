@@ -2,6 +2,12 @@
 
 This project builds on the raytracing sensors provided by the wgpu sensors library.
 
+## Requirements
+
+You will need a recent version of rust, a non-apple ray-tracing enabled GPU (NVidia RTX or above, AMD RX6000 and above, steamdeck or intel battlemage)
+
+## Build from source
+
 ## Supported platform
 
 This library is only available as a source build on ROS2 Jazzy.
@@ -19,3 +25,8 @@ I personally love using Distrobox. Sure its overkill, but its great for quickly 
     ]
 }
 ```
+
+## TODOs
+
+- Support all sdf shapes (currently only cubes are supported)
+- Support all 
