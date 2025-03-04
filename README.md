@@ -4,9 +4,14 @@ This project builds on the raytracing sensors provided by the wgpu sensors libra
 
 ## Requirements
 
-You will need a recent version of rust, a non-apple ray-tracing enabled GPU (NVidia RTX or above, AMD RX6000 and above, steamdeck or intel battlemage)
+This is package designed to be built on ros2 jazzy. You will need a recent version of [rust](https://www.rust-lang.org/tools/install), a non-apple ray-tracing enabled GPU (NVidia RTX or above, AMD RX6000 and above, steamdeck or intel battlemage)
 
+You will also need rerun as currently this prototype directly visuallizes the depth data on the GPU as a rerun object.
 ## Build from source
+On ros2 jazzy:
+```
+git clone 
+```
 
 ## Supported platform
 
@@ -29,4 +34,5 @@ I personally love using Distrobox. Sure its overkill, but its great for quickly 
 ## TODOs
 
 - Support all sdf shapes (currently only cubes are supported)
-- Support all 
+- Move rendering of main thread via some queue.
+- Explore LiDARs.
