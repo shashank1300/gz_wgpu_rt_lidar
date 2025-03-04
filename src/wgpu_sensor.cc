@@ -43,6 +43,7 @@ namespace wgpu_sensor {
     RtDepthCamera* rt_depth_camera{nullptr};
     std::unordered_map<size_t, size_t> gz_entity_to_rt_instance;
     gz::sim::Entity camera_entity;
+    std::chrono::steady_clock::duration last_time;
   };
 
 
@@ -123,7 +124,7 @@ namespace wgpu_sensor {
                                gz::sim::EventManager &_eventMgr) {
     gzmsg << "WGPURtSensor::Configure" << std::endl;
     this->rt_runtime = create_rt_runtime();
-    this->rt_depth_camera = create_rt_depth_camera(this->rt_runtime, 256, 256, 0.75);
+    this->rt_depth_camera = create_rt_depth_camera(this->rt_runtime, 256, 256, 59.0);
     this->camera_entity = _entity;
   }
 
@@ -133,6 +134,11 @@ namespace wgpu_sensor {
     if (_info.paused) {
       return;
     }
+
+    if ((_info.simTime - last_time) < std::chrono::milliseconds(30) && _info.iterations != 0) {
+      return;
+    }
+    last_time = _info.simTime;
 
     if( this->rt_scene == nullptr) {
       auto rt_scene_builder = create_rt_scene_builder();
@@ -173,14 +179,9 @@ namespace wgpu_sensor {
       _ecm.Each<gz::sim::components::Visual, gz::sim::components::Geometry>
             ([this, &rt_scene_update, &_ecm](auto& entity, auto&& visual, auto&& geometry) {
         auto pose = gz::sim::worldPose(entity, _ecm);
-        /*if (!pose) {
-          gzerr << "No pose component found for entity " << entity << std::endl;
-          return true;
-        }*/
-
         auto instance_handle = gz_entity_to_rt_instance.find(entity);
         if (instance_handle == gz_entity_to_rt_instance.end()) {
-          gzerr << "No instance found for entity " << entity << std::endl;
+          gzwarn << "No instance found for entity " << entity << std::endl;
           return true;
         }
         auto instance = 
@@ -195,12 +196,8 @@ namespace wgpu_sensor {
 
       set_transforms(rt_scene, rt_runtime, rt_scene_update);
 
-      auto camera_pose = _ecm.Component<gz::sim::components::Pose>(camera_entity);
-      if (!camera_pose) {
-        gzmsg << "No pose component found for camera entity " << camera_entity << std::endl;
-        return;
-      }
-      auto view_matrix = create_view_matrix(camera_pose->Data().Pos().X(), camera_pose->Data().Pos().Y(), camera_pose->Data().Pos().Z(), camera_pose->Data().Rot().X(), camera_pose->Data().Rot().Y(), camera_pose->Data().Rot().Z(), camera_pose->Data().Rot().W());
+      auto camera_pose =  gz::sim::worldPose(camera_entity, _ecm);
+      auto view_matrix = create_view_matrix(camera_pose.Pos().X(), camera_pose.Pos().Y(), camera_pose.Pos().Z(), camera_pose.Rot().X(), camera_pose.Rot().Y(), camera_pose.Rot().Z(), camera_pose.Rot().W());
       render_depth(rt_depth_camera, rt_scene, rt_runtime, view_matrix);
       free_rt_scene_update(rt_scene_update);
       free_view_matrix(view_matrix);
