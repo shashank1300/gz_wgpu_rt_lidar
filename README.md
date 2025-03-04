@@ -10,7 +10,9 @@ You will also need rerun as currently this prototype directly visuallizes the de
 ## Build from source
 On ros2 jazzy:
 ```
-git clone 
+git clone git@github.com:arjo129/gz_wgpu_rt_lidar.git
+rosdep install --from-paths gz_wgpu_rt_lidar
+colcon build
 ```
 
 ## Supported platform
