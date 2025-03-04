@@ -171,8 +171,6 @@ namespace wgpu_sensor {
       this->rt_scene = create_rt_scene(this->rt_runtime, rt_scene_builder);
       free_rt_scene_builder(rt_scene_builder);
     }
-  
-
     else {
       high_resolution_clock::time_point t1 = high_resolution_clock::now();
       auto rt_scene_update = create_rt_scene_update();
