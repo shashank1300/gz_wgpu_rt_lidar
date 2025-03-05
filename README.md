@@ -1,6 +1,6 @@
 # WGPU based Raytracing Sensors for Gazebo
 
-This project builds on the raytracing sensors provided by the wgpu sensors library.
+This project builds on the raytracing sensors provided by the wgpu sensors library. It is currently at a Proof-of-concept stage and can only render boxes.
 
 ## Requirements
 
