@@ -6,12 +6,15 @@ This project builds on the raytracing sensors provided by the wgpu sensors libra
 
 This is package designed to be built on ros2 jazzy. You will need a recent version of [rust](https://www.rust-lang.org/tools/install), a non-apple ray-tracing enabled GPU (NVidia RTX or above, AMD RX6000 and above, steamdeck or intel battlemage)
 
-You will also need rerun as currently this prototype directly visuallizes the depth data on the GPU as a rerun object.
+You will also need [rerun](https://rerun.io/) as currently this prototype directly visuallizes the depth data on the GPU as a rerun object.
 ## Build from source
 On ros2 jazzy:
 ```
-git clone 
+git clone git@github.com:arjo129/gz_wgpu_rt_lidar.git
+rosdep install --src gz_wgpu_rt_lidar
+colcon build
 ```
+
 
 ## Supported platform
 
@@ -22,7 +25,7 @@ I personally love using Distrobox. Sure its overkill, but its great for quickly 
 
 
 ## Rust Analyzer Config
-
+For code completion to work in vscode you may need to specify the following
 ```json
 {
     "rust-analyzer.linkedProjects": [

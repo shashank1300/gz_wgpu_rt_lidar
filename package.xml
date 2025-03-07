@@ -3,11 +3,12 @@
 <package format="3">
   <name>gz_wgpu_rt_lidar</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="arjo129@gmail.com">arjo</maintainer>
-  <license>TODO: License declaration</license>
+  <description>Provides a proof of concept raytracing lidar sensors that is compatible with a wide variety of GPUs</description>
+  <maintainer email="arjo129@gmail.com">Arjo Chakravarty</maintainer>
+  <license>Apache License</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>gz_sim_vendor</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
