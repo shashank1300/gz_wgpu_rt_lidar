@@ -1,6 +1,6 @@
 # WGPU based Raytracing Sensors for Gazebo
 
-This project builds on the raytracing sensors provided by the wgpu sensors library.
+This project builds on the raytracing sensors provided by the wgpu sensors library. It is currently at a Proof-of-concept stage and can only render boxes.
 
 ## Requirements
 
@@ -11,7 +11,7 @@ You will also need [rerun](https://rerun.io/) as currently this prototype direct
 On ros2 jazzy:
 ```
 git clone git@github.com:arjo129/gz_wgpu_rt_lidar.git
-rosdep install --src gz_wgpu_rt_lidar
+rosdep install --from-paths gz_wgpu_rt_lidar
 colcon build
 ```
 
