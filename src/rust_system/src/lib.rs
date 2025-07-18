@@ -450,8 +450,10 @@ impl Rt3DLidarConfiguration {
                     vertical_angle.cos() * horizontal_angle.cos()
                 );
                 directions.push(direction);
+                //println!("length: {}", direction.length());
             }
         }
+        println!("length: {}", directions.len());
         directions
     }
 }
@@ -525,8 +527,10 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
     };
 
     let start_time = Instant::now();
-    let mut res = futures::executor::block_on(lidar.lidar.render_lidar_beams(&scene.scene, &runtime.device, &runtime.queue, &Affine3A::from_mat4(view.view.inverse())));
+    let mut res = futures::executor::block_on(lidar.lidar.render_lidar_pointcloud(&scene.scene, &runtime.device, &runtime.queue, &Affine3A::from_mat4(view.view.inverse())));
 
+    println!("Number of points rendered: {}", res.len());
+    println!("Points: {:?}", res);
 
     let point_cloud = RtPointCloud {
         points: res.as_mut_ptr(),
