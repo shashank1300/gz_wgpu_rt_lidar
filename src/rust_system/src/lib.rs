@@ -1,7 +1,7 @@
-use glam::{Affine3A, Mat3A, Quat, Vec3A};
+use glam::{Affine3A, Mat3A, Quat, Vec3A, Vec3};
 use ndarray::ShapeBuilder;
 use wgpu::Device;
-use wgpu_rt_lidar::{utils::get_raytracing_gpu, vertex, AssetMesh, Instance, Vertex};
+use wgpu_rt_lidar::{utils::get_raytracing_gpu,lidar::Lidar, vertex, AssetMesh, Instance, Vertex};
 use std::time::Instant;
 
 #[no_mangle]
@@ -210,7 +210,7 @@ pub extern "C" fn free_rt_scene_update(ptr: *mut RtSceneUpdate)
 #[repr(C)]
 pub struct RtScene {
     scene: wgpu_rt_lidar::RayTraceScene,
-    //rec: rerun::RecordingStream
+    rec: rerun::RecordingStream
 }
 
 #[no_mangle]
@@ -225,6 +225,9 @@ pub extern "C" fn create_rt_scene(runtime: *mut RtRuntime, builder: *mut RtScene
         &mut *builder
     };
 
+    let rec = rerun::RecordingStreamBuilder::new("debug_viz")
+      .spawn()
+      .unwrap();
     let scene = 
      futures::executor::block_on(
         wgpu_rt_lidar::RayTraceScene::new(
@@ -235,7 +238,7 @@ pub extern "C" fn create_rt_scene(runtime: *mut RtRuntime, builder: *mut RtScene
             &builder.instances));
     Box::into_raw(Box::new(RtScene {
         scene,
-        //rec: rerun::RecordingStreamBuilder::new("debug_viz").spawn().unwrap()
+        rec
     }))
 }
 
@@ -255,6 +258,8 @@ pub extern "C" fn set_transforms(ptr: *mut RtScene, device: *mut RtRuntime, upda
     };
     println!("Setting transforms {:?}", updates.updates);
     futures::executor::block_on(scene.scene.set_transform(&device.device, &device.queue, &updates.updates, &updates.indices));
+
+    scene.scene.visualize(&scene.rec);
 }
 
 #[no_mangle]
@@ -526,11 +531,24 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
         &mut *view
     };
 
+    let lidar_pose = Affine3A::from_mat4(view.view);
+
     let start_time = Instant::now();
+    scene.scene.visualize(&scene.rec);
     let mut res = futures::executor::block_on(lidar.lidar.render_lidar_pointcloud(&scene.scene, &runtime.device, &runtime.queue, &Affine3A::from_mat4(view.view.inverse())));
 
     println!("Number of points rendered: {}", res.len());
     println!("Points: {:?}", res);
+    let p = res
+      .chunks(4)
+      .filter(|p| p[3] < Lidar::no_hit_const())
+      .map(|p| {
+          lidar_pose
+            .transform_point3(Vec3::new(p[0], p[1], p[2]))
+            .to_array()
+      });
+    lidar.lidar.visualize_rays(&scene.rec, &lidar_pose, "lidar_beams");
+    scene.rec.log("points", &rerun::Points3D::new(p)).unwrap();
 
     let point_cloud = RtPointCloud {
         points: res.as_mut_ptr(),
