@@ -536,7 +536,7 @@ namespace wgpu_sensor
             *msg.mutable_header()->mutable_stamp() = gz::msgs::Convert(_info.simTime);
             auto frame = msg.mutable_header()->add_data();
             frame->set_key("frame_id");
-            frame->add_value(sensor->Name());
+            frame->add_value(sensor->ParentEntityName());
 
             msg.add_field()->set_name("x");
             msg.add_field()->set_name("y");

@@ -450,9 +450,9 @@ impl Rt3DLidarConfiguration {
             for j in 0..self.num_steps {
                 let horizontal_angle = self.min_horizontal_angle + j as f32 * self.step_horizontal_angle;
                 let direction = glam::Vec3::new(
+                    vertical_angle.cos() * horizontal_angle.cos(),
                     vertical_angle.cos() * horizontal_angle.sin(),
-                    vertical_angle.sin(),
-                    vertical_angle.cos() * horizontal_angle.cos()
+                    vertical_angle.sin()
                 );
                 directions.push(direction);
                 //println!("length: {}", direction.length());
@@ -535,10 +535,10 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
 
     let start_time = Instant::now();
     scene.scene.visualize(&scene.rec);
-    let mut res = futures::executor::block_on(lidar.lidar.render_lidar_pointcloud(&scene.scene, &runtime.device, &runtime.queue, &Affine3A::from_mat4(view.view.inverse())));
+    let mut res = futures::executor::block_on(lidar.lidar.render_lidar_pointcloud(&scene.scene, &runtime.device, &runtime.queue, &lidar_pose));
 
     println!("Number of points rendered: {}", res.len());
-    println!("Points: {:?}", res);
+    //println!("Points: {:?}", res);
     let p = res
       .chunks(4)
       .filter(|p| p[3] < Lidar::no_hit_const())
@@ -555,7 +555,7 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
         length: res.len(),
     };
     let elapsed = start_time.elapsed();
-    println!("Render time for transport: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
+    println!("Render time for LiDAR: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
     // Prevent the vector from being deallocated
     std::mem::forget(res);
 

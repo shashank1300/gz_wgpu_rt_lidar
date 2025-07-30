@@ -158,7 +158,14 @@ void RtSensor::LidarConfig(const sdf::ElementPtr &_sdf)
       auto vertElem = scanElem->GetElement("vertical");
       this->config.lidar.min_vertical_angle = vertElem->Get<double>("min_angle", -M_PI).first;
       this->config.lidar.max_vertical_angle = vertElem->Get<double>("max_angle", M_PI).first;
-      this->config.lidar.step_vertical_angle = vertElem->Get<double>("step", 4).first;
+      if (this->config.lidar.num_lasers > 1)
+      {
+        this->config.lidar.step_vertical_angle = (this->config.lidar.max_vertical_angle - this->config.lidar.min_vertical_angle) /(this->config.lidar.num_lasers - 1);
+      }
+      else
+      {
+        this->config.lidar.step_vertical_angle = 0.0;
+      }
     }
 
     if (scanElem->HasElement("horizontal"))
@@ -166,7 +173,14 @@ void RtSensor::LidarConfig(const sdf::ElementPtr &_sdf)
       auto horzElem = scanElem->GetElement("horizontal");
       this->config.lidar.min_horizontal_angle = horzElem->Get<double>("min_angle", -M_PI).first;
       this->config.lidar.max_horizontal_angle = horzElem->Get<double>("max_angle", M_PI).first;
-      this->config.lidar.step_horizontal_angle = horzElem->Get<double>("step", 4).first;
+      if (this->config.lidar.num_steps > 1)
+      {
+      this->config.lidar.step_horizontal_angle = (this->config.lidar.max_horizontal_angle - this->config.lidar.min_horizontal_angle) /(this->config.lidar.num_steps - 1);
+        }
+        else
+        {
+            this->config.lidar.step_horizontal_angle = 0.0;
+        }
     }
   }
 
