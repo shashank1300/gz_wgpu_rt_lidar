@@ -353,17 +353,7 @@ pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, run
     let converted_data: Vec<u16> = res.iter()
         .map(|x| (x * 1000.0) as u16)
         .collect();
-/*    let image = ndarray::Array::from_shape_vec((height, width).f(), converted_data)
-        .expect("Shape mismatch");
 
-    let depth_image = rerun::DepthImage::try_from(image)
-        .unwrap()
-        .with_meter(1000.0)
-        .with_colormap(rerun::components::Colormap::Viridis);
-    scene.rec.log("depth_cloud", &depth_image);
-
-    let elapsed = start_time.elapsed();
-    println!("Render time for rerun: {:.2}ms", elapsed.as_secs_f64() * 1000.0);*/
     let mut boxed_data = converted_data.into_boxed_slice();
     let data_ptr = boxed_data.as_mut_ptr();
     let data_len = boxed_data.len();

@@ -404,7 +404,6 @@ namespace wgpu_sensor
     }
     else
     {
-
       bool shouldUpdate = false;
       for (auto const& [entityId, sensor] : this->entitySensorMap)
       {
@@ -450,13 +449,6 @@ namespace wgpu_sensor
 
 		auto update_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
             std::chrono::duration<double>(1.0 / sensor->UpdateRate()));
-
-        gzdbg << "Checking sensor [" << sensor->Name() << "]: "
-          << "simTime=" << _info.simTime.count()
-          << ", lastUpdate=" << sensor->lastUpdateTime.count()
-          << ", period=" << update_period.count()
-          << ", elapsed=" << (_info.simTime - sensor->lastUpdateTime).count()
-          << std::endl;
 
    	    // Check if enough time has passed using the sensor's OWN member variable
         if ((_info.simTime - sensor->lastUpdateTime) < update_period)
@@ -561,7 +553,6 @@ namespace wgpu_sensor
             msg.add_field()->set_name("y");
             msg.add_field()->set_name("z");
             msg.add_field()->set_name("i");
-
 
         	msg.set_point_step(sizeof(float) * 4);
 
