@@ -447,7 +447,7 @@ namespace wgpu_sensor
       for (auto const& [entityId, sensor] : this->entitySensorMap)
       {
 
-		auto update_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+        auto update_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
             std::chrono::duration<double>(1.0 / sensor->UpdateRate()));
 
    	    // Check if enough time has passed using the sensor's OWN member variable
@@ -554,9 +554,9 @@ namespace wgpu_sensor
             msg.add_field()->set_name("z");
             msg.add_field()->set_name("i");
 
-        	msg.set_point_step(sizeof(float) * 4);
+            msg.set_point_step(sizeof(float) * 4);
 
-        	msg.set_data(pointCloudData.points, pointCloudData.length * sizeof(float));
+            msg.set_data(pointCloudData.points, pointCloudData.length * sizeof(float));
 
             // Publish the message
             publisher_it->second.Publish(msg);
