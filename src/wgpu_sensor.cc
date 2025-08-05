@@ -367,12 +367,6 @@ namespace wgpu_sensor
       return;
     }
 
-    //if ((_info.simTime - last_time) < std::chrono::milliseconds(30) && _info.iterations != 0)
-    //{
-    //  return;
-    //}
-    //last_time = _info.simTime;
-
     if (this->rt_scene == nullptr)
     {
       auto rt_scene_builder = create_rt_scene_builder();
@@ -410,7 +404,24 @@ namespace wgpu_sensor
     }
     else
     {
-      high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
+      bool shouldUpdate = false;
+      for (auto const& [entityId, sensor] : this->entitySensorMap)
+      {
+        auto update_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(1.0 / sensor->UpdateRate()));
+        if ((_info.simTime - sensor->lastUpdateTime) >= update_period)
+        {
+          shouldUpdate = true;
+          break;
+        }
+      }
+
+      if (!shouldUpdate)
+      {
+          return; // No sensors need updating, skip
+      }
+
       auto rt_scene_update = create_rt_scene_update();
       _ecm.Each<gz::sim::components::Visual, gz::sim::components::Geometry>
         ([this, &rt_scene_update, &_ecm](auto& entity, auto&& visual, auto&& geometry)
@@ -434,20 +445,28 @@ namespace wgpu_sensor
 
       set_transforms(rt_scene, rt_runtime, rt_scene_update);
 
-      // Old camera rendering code
-      /*
-      auto camera_pose = gz::sim::worldPose(camera_entity, _ecm);
-      auto view_matrix = create_view_matrix(camera_pose.Pos().X(), camera_pose.Pos().Y(), camera_pose.Pos().Z(), camera_pose.Rot().X(), camera_pose.Rot().Y(), camera_pose.Rot().Z(), camera_pose.Rot().W());
-      render_depth(rt_depth_camera, rt_scene, rt_runtime, view_matrix);
-      free_rt_scene_update(rt_scene_update);
-      free_view_matrix(view_matrix);
-      high_resolution_clock::time_point t2 = high_resolution_clock::now();
-      auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-      gzmsg << "Time taken to render depth: " << duration << std::endl; */
-
       for (auto const& [entityId, sensor] : this->entitySensorMap)
       {
-        //auto publisher_it = this->image_publishers.find(entityId);
+
+		auto update_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(1.0 / sensor->UpdateRate()));
+
+        gzdbg << "Checking sensor [" << sensor->Name() << "]: "
+          << "simTime=" << _info.simTime.count()
+          << ", lastUpdate=" << sensor->lastUpdateTime.count()
+          << ", period=" << update_period.count()
+          << ", elapsed=" << (_info.simTime - sensor->lastUpdateTime).count()
+          << std::endl;
+
+   	    // Check if enough time has passed using the sensor's OWN member variable
+        if ((_info.simTime - sensor->lastUpdateTime) < update_period)
+        {
+          continue; // Not time to update yet, skip
+        }
+
+	    // Update the last update time for the sensor
+        sensor->lastUpdateTime = _info.simTime;
+
         // Find the parent entity's pose to get the sensor's world pose
         // (assuming the sensor's pose is relative to its parent link/model)
         gz::sim::Entity parentEntity = gz::sim::kNullEntity;

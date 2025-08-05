@@ -4,6 +4,7 @@
 #include <gz/math/Pose3.hh>
 #include <string>
 #include <sdf/Sensor.hh>
+#include <chrono>
 #include <cmath>
 
 namespace rtsensor
@@ -64,6 +65,9 @@ namespace rtsensor
 
     /// \brief The name of the parent entity (model or link) this sensor is attached to.
     private: std::string parentEntityName;
+
+    /// \brief The last update time of the sensor.
+	public: std::chrono::steady_clock::duration lastUpdateTime{0};
 
     /// \brief Configuration parameters for the sensor.
     public: struct Config
