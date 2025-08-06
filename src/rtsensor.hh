@@ -2,8 +2,10 @@
 
 #include <gz/sensors/Sensor.hh>
 #include <gz/math/Pose3.hh>
-#include <string>
+#include <gz/sim/Types.hh>
 #include <sdf/Sensor.hh>
+
+#include <string>
 #include <chrono>
 #include <cmath>
 
@@ -52,19 +54,19 @@ namespace rtsensor
     public: const std::string& TopicName() const;
 
     /// \brief Set the name of the parent entity (e.g., link or model) this sensor is attached to.
-    public: void SetParentEntityName(const std::string& _parentName);
+    public: void SetParentEntity(const gz::sim::Entity &_parentEntity);
 
     /// \brief Get the name of the parent entity.
-    public: const std::string& ParentEntityName() const;
+    public: gz::sim::Entity ParentEntity() const;
+
+    /// \brief Te parent entity (model or link) this sensor is attached to.
+    private: gz::sim::Entity parentEntity{gz::sim::kNullEntity};
 
     /// \brief Sensor type (camera or lidar).
     private: SensorType sensorType{SensorType::CAMERA};
 
     /// \brief Current sensor pose in world coordinates.
     private: gz::math::Pose3d currentPose{gz::math::Pose3d::Zero};
-
-    /// \brief The name of the parent entity (model or link) this sensor is attached to.
-    private: std::string parentEntityName;
 
     /// \brief The last update time of the sensor.
 	public: std::chrono::steady_clock::duration lastUpdateTime{0};

@@ -111,15 +111,15 @@ bool RtSensor::Update(const std::chrono::steady_clock::duration &_now)
 }
 
 //////////////////////////////////////////////////
-void RtSensor::SetParentEntityName(const std::string& _parentName)
+void RtSensor::SetParentEntity(const gz::sim::Entity &_parentEntity)
 {
-  this->parentEntityName = _parentName;
+  this->parentEntity = _parentEntity;
 }
 
 //////////////////////////////////////////////////
-const std::string& RtSensor::ParentEntityName() const
+gz::sim::Entity RtSensor::ParentEntity() const
 {
-  return this->parentEntityName;
+  return this->parentEntity;
 }
 
 //////////////////////////////////////////////////

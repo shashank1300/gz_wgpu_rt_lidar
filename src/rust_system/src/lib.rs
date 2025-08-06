@@ -360,7 +360,7 @@ pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, run
     std::mem::forget(boxed_data); // Prevent Rust from deallocating the memory
 
     let elapsed2 = start_time.elapsed();
-    println!("Render time for transport: {:.2}ms", elapsed2.as_secs_f64() * 1000.0);
+    println!("Render time for CAMERA: {:.2}ms", elapsed2.as_secs_f64() * 1000.0);
 
     // Return the image data struct
     ImageData { ptr: data_ptr, len: data_len, width, height }

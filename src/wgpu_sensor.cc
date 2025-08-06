@@ -289,7 +289,7 @@ namespace wgpu_sensor
         }
 
         // Set the parent entity name on the RtSensor instance for later pose lookup
-        auto parentNameComp = _ecm.Component<gz::sim::components::Name>(_parent->Data());
+        /*auto parentNameComp = _ecm.Component<gz::sim::components::Name>(_parent->Data());
         if (parentNameComp)
         {
           sensor->SetParentEntityName(parentNameComp->Data());
@@ -297,7 +297,8 @@ namespace wgpu_sensor
         else
         {
           gzerr << "[WGPURtSensor] Parent entity name not found for sensor entity [" << _entity << "]" << std::endl;
-        }
+        }*/
+        sensor->SetParentEntity(_parent->Data());
 
         if (sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
         {
@@ -461,7 +462,7 @@ namespace wgpu_sensor
 
         // Find the parent entity's pose to get the sensor's world pose
         // (assuming the sensor's pose is relative to its parent link/model)
-        gz::sim::Entity parentEntity = gz::sim::kNullEntity;
+        /*gz::sim::Entity parentEntity = gz::sim::kNullEntity;
         _ecm.Each<gz::sim::components::Name>(
             [&](const gz::sim::Entity &ent, const gz::sim::components::Name *name)
             {
@@ -471,7 +472,8 @@ namespace wgpu_sensor
                     return false; // Found, stop iteration
                 }
                 return true;
-            });
+            });*/
+        gz::sim::Entity parentEntity = sensor->ParentEntity();
         if (sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
         {
           auto publisher_it = this->image_publishers.find(entityId);
@@ -515,7 +517,7 @@ namespace wgpu_sensor
           }
           else
           {
-            gzwarn << "[WGPURtSensor] Could not find parent entity [" << sensor->ParentEntityName()
+            gzwarn << "[WGPURtSensor] Could not find parent entity [" << sensor->ParentEntity()
                    << "] for custom sensor [" << sensor->Name() << "], skipping render." << std::endl;
           }
         }
@@ -547,7 +549,7 @@ namespace wgpu_sensor
             *msg.mutable_header()->mutable_stamp() = gz::msgs::Convert(_info.simTime);
             auto frame = msg.mutable_header()->add_data();
             frame->set_key("frame_id");
-            frame->add_value(sensor->ParentEntityName());
+            frame->add_value(sensor->Name());
 
             msg.add_field()->set_name("x");
             msg.add_field()->set_name("y");
