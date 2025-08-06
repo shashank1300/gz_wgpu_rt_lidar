@@ -65,7 +65,7 @@
           </material>
         </visual>
 
-        <!-- Custom Camera Sensor -->
+        <!-- Custom LiDAR Sensor -->
         <sensor name="my_rt_lidar" type="custom" gz:type="rt_lidar">
               <always_on>1</always_on>
               <update_rate>10</update_rate>
