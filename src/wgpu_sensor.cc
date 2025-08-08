@@ -74,6 +74,7 @@ namespace wgpu_sensor
       std::unordered_map<gz::sim::Entity,
           std::pair<std::shared_ptr<rtsensor::RtSensor>, gz::transport::Node::Publisher>> entitySensorMap;
 
+
       gz::transport::Node node; // Gazebo Transport Node
     //std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> image_publishers; // Map to store publishers per sensor
     //std::unordered_map<gz::sim::Entity, RtDepthCamera*> rt_depth_cameras;
@@ -125,14 +126,10 @@ namespace wgpu_sensor
 
         gz::transport::Node::Publisher pub;
         if (sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
-        {
-            pub = this->node.Advertise<gz::msgs::Image>(sensor->TopicName());
-        }
-        else if (sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
-        {
-            pub = this->node.Advertise<gz::msgs::PointCloudPacked>(sensor->TopicName());
+
         }
         this->entitySensorMap[_entity] = std::make_pair(sensor, pub);
+
 
         return true;
       });
@@ -152,6 +149,7 @@ namespace wgpu_sensor
     if (!this->rtManager->IsSceneInitialized())
     {
       this->rtManager->BuildScene(_ecm);
+
     }
     else
     {
@@ -165,6 +163,7 @@ namespace wgpu_sensor
         {
           shouldUpdate = true;
           break;
+
         }
       }
 
