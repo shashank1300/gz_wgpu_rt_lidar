@@ -126,10 +126,14 @@ namespace wgpu_sensor
 
         gz::transport::Node::Publisher pub;
         if (sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
-
+        {
+            pub = this->node.Advertise<gz::msgs::Image>(sensor->TopicName());
+        }
+        else if (sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
+        {
+            pub = this->node.Advertise<gz::msgs::PointCloudPacked>(sensor->TopicName());
         }
         this->entitySensorMap[_entity] = std::make_pair(sensor, pub);
-
 
         return true;
       });
