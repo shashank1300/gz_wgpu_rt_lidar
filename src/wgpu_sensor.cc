@@ -47,8 +47,6 @@ namespace wgpu_sensor
       gz::transport::Node node; // Gazebo Transport Node
   };
 
-
-
   void WGPURtSensor::Configure(const gz::sim::Entity &_entity,
                                const std::shared_ptr<const sdf::Element> &_sdf,
                                gz::sim::EntityComponentManager &_ecm,
@@ -100,7 +98,6 @@ namespace wgpu_sensor
       });
 
   }
-
 
   void WGPURtSensor::PostUpdate(const gz::sim::UpdateInfo &_info,
                                 const gz::sim::EntityComponentManager &_ecm)
@@ -154,6 +151,7 @@ namespace wgpu_sensor
     }
   }
   }
+
   void WGPURtSensor::RemoveSensorEntities(
       const gz::sim::EntityComponentManager &_ecm)
   {
