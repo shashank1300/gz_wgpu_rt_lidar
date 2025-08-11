@@ -1,33 +1,15 @@
 #include <gz/plugin/Register.hh>
 
-//#include <gz/msgs/entity_factory.pb.h>
-
-//#include <gz/sim/components/Pose.hh>
-//#include <gz/sim/components/Geometry.hh>
-//#include <gz/sim/components/Visual.hh>
 #include <gz/sim/components/CustomSensor.hh>
 #include <gz/sim/components/ParentEntity.hh>
-//#include <gz/sim/components/Name.hh>
 #include <gz/sim/System.hh>
 #include <gz/sim/Util.hh>
 
-//#include <gz/common/MeshManager.hh>
-//#include <gz/common/SubMesh.hh>
-
-//#include <gz/msgs/image.pb.h>
 #include <gz/transport/Node.hh>
 
-//#include <gz/common/StringUtils.hh>
-
-//#include <sdf/Box.hh>
-//#include <sdf/Plane.hh>
-//#include <sdf/Sensor.hh>
-#include <unordered_map>
 #include <memory>
+#include <unordered_map>
 #include <utility>
-//#include <string>
-
-//#include "rust_binding.h"
 
 #include "rtsensor.hh"
 #include "rtmanager.hh"
@@ -41,11 +23,6 @@ namespace wgpu_sensor
     public gz::sim::ISystemPreUpdate,
     public gz::sim::ISystemPostUpdate
   {
-    /// \brief Constructor
-    //public: WGPURtSensor();
-    /// \brief Destructor
-    //public: ~WGPURtSensor();
-
     // Documentation inherited
     public: void Configure(const gz::sim::Entity &_entity,
                            const std::shared_ptr<const sdf::Element> &_sdf,
@@ -61,14 +38,6 @@ namespace wgpu_sensor
 
     public: void RemoveSensorEntities(const gz::sim::EntityComponentManager &_ecm);
 
-    //public: Mesh* convertSDFModelToWGPU(const sdf::Geometry& geom);
-
-    //RtScene* rt_scene {nullptr};
-    //RtRuntime* rt_runtime;
-    //RtDepthCamera* rt_depth_camera{nullptr};
-    //std::unordered_map<size_t, size_t> gz_entity_to_rt_instance;
-    //std::chrono::steady_clock::duration last_time;
-
     private:
       std::unique_ptr<RTManager> rtManager;
       std::unordered_map<gz::sim::Entity,
@@ -76,11 +45,6 @@ namespace wgpu_sensor
 
 
       gz::transport::Node node; // Gazebo Transport Node
-    //std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> image_publishers; // Map to store publishers per sensor
-    //std::unordered_map<gz::sim::Entity, RtDepthCamera*> rt_depth_cameras;
-
-    //std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> pointcloud_publishers; // Map to store Publishers for LiDAR data
-    //std::unordered_map<gz::sim::Entity, RtLidar*> rt_lidars;
   };
 
 
@@ -90,9 +54,6 @@ namespace wgpu_sensor
                                gz::sim::EntityComponentManager &_ecm,
                                gz::sim::EventManager &_eventMgr)
   {
-    //gzmsg << "WGPURtSensor::Configure" << std::endl;
-    //this->rt_runtime = create_rt_runtime();
-    //this->rt_depth_camera = create_rt_depth_camera(this->rt_runtime, 256, 256, 59.0);
     this->rtManager = std::make_unique<RTManager>();
     this->rtManager->Initialize();
   }
