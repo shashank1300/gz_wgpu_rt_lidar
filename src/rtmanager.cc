@@ -92,26 +92,26 @@ void RTManager::BuildScene(const gz::sim::EntityComponentManager &_ecm)
 
 void RTManager::UpdateTransforms(const gz::sim::EntityComponentManager &_ecm)
 {
-      auto rt_scene_update = create_rt_scene_update();
-      _ecm.Each<gz::sim::components::Visual, gz::sim::components::Geometry>
-        ([this, &rt_scene_update, &_ecm](auto& entity, auto&& visual, auto&& geometry)
-        {
-          auto pose = gz::sim::worldPose(entity, _ecm);
-          auto instance_handle = gz_entity_to_rt_instance.find(entity);
-          if (instance_handle == gz_entity_to_rt_instance.end())
-          {
-            gzwarn << "No instance found for entity " << entity << std::endl;
-            return true;
-          }
-          auto instance =
-            create_instance_wrapper(instance_handle->second,
-              pose.Pos().X(), pose.Pos().Y(), pose.Pos().Z(),
-              pose.Rot().X(), pose.Rot().Y(), pose.Rot().Z(), pose.Rot().W());
+  auto rt_scene_update = create_rt_scene_update();
+  _ecm.Each<gz::sim::components::Visual, gz::sim::components::Geometry>
+    ([this, &rt_scene_update, &_ecm](auto& entity, auto&& visual, auto&& geometry)
+    {
+      auto pose = gz::sim::worldPose(entity, _ecm);
+      auto instance_handle = gz_entity_to_rt_instance.find(entity);
+      if (instance_handle == gz_entity_to_rt_instance.end())
+      {
+        gzwarn << "No instance found for entity " << entity << std::endl;
+        return true;
+      }
+      auto instance =
+        create_instance_wrapper(instance_handle->second,
+          pose.Pos().X(), pose.Pos().Y(), pose.Pos().Z(),
+          pose.Rot().X(), pose.Rot().Y(), pose.Rot().Z(), pose.Rot().W());
 
-          add_update(rt_scene_update, instance, instance_handle->second);
-          free_instance_wrapper(instance);
-          return true;
-        });
+      add_update(rt_scene_update, instance, instance_handle->second);
+      free_instance_wrapper(instance);
+      return true;
+    });
 
   set_transforms(this->rt_scene, this->rt_runtime, rt_scene_update);
   free_rt_scene_update(rt_scene_update);
