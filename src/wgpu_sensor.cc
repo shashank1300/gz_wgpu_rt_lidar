@@ -6,8 +6,6 @@
 #include <gz/sim/System.hh>
 #include <gz/sim/Util.hh>
 
-//#include <gz/transport/Node.hh>
-
 #include <memory>
 #include <unordered_map>
 #include <utility>
@@ -43,7 +41,6 @@ namespace wgpu_sensor
       std::unique_ptr<RTManager> rtManager;
       std::unordered_map<gz::sim::Entity, std::shared_ptr<rtsensor::RtSensor>> entitySensorMap;
 
-      //gz::transport::Node node; // Gazebo Transport Node
   };
 
   void WGPURtSensor::Configure(const gz::sim::Entity &_entity,
@@ -82,15 +79,6 @@ namespace wgpu_sensor
 
         this->rtManager->CreateSensorRenderer(_entity, sensor);
 
-        /*gz::transport::Node::Publisher pub;
-        if (sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
-        {
-            pub = this->node.Advertise<gz::msgs::Image>(sensor->TopicName());
-        }
-        else if (sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
-        {
-            pub = this->node.Advertise<gz::msgs::PointCloudPacked>(sensor->TopicName());
-        }*/
         this->entitySensorMap[_entity] = sensor;
 
         return true;
@@ -123,7 +111,6 @@ namespace wgpu_sensor
         shouldUpdate = true;
         sensor->lastUpdateTime = _info.simTime;
 
-        // Create a render job
         RTManager::RenderJob job;
         job.entityId = entityId;
         job.sensor = sensor;
@@ -135,8 +122,6 @@ namespace wgpu_sensor
         {
           job.parentFrameId = parentNameComp->Data();
         }
-
-        // Queue the job instead of rendering directly
         this->rtManager->QueueRenderJob(job);
       }
     }
@@ -145,38 +130,7 @@ namespace wgpu_sensor
     {
       this->rtManager->UpdateTransforms(_ecm);
     }
-
-      /*if (!shouldUpdate)
-      {
-          return; // No sensors need updating, skip
-      }
-
-      this->rtManager->UpdateTransforms(_ecm);
-
-    for (auto & [entityId, pair] : this->entitySensorMap)
-    {
-      auto & sensor = pair.first;
-      auto & publisher = pair.second;
-      auto update_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-          std::chrono::duration<double>(1.0 / sensor->UpdateRate()));
-
-      if ((_info.simTime - sensor->lastUpdateTime) >= update_period)
-      {
-        sensor->lastUpdateTime = _info.simTime;
-        //this->rtManager->RenderSensor(entityId, sensor, _info, _ecm, publisher);
-
-        // Create a render job
-        RTManager::RenderJob job;
-        job.entityId = entityId;
-        job.sensor = sensor;
-        job.sensorWorldPose = gz::sim::worldPose(sensor->ParentEntity(), _ecm);
-        job.updateInfo = _info; // Pass the current UpdateInfo
-
-        // Queue the job instead of rendering directly
-        this->rtManager->QueueRenderJob(job);
-      }*/
   }
-
 
   void WGPURtSensor::RemoveSensorEntities(
       const gz::sim::EntityComponentManager &_ecm)

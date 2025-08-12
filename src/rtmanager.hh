@@ -54,13 +54,6 @@ namespace wgpu_sensor
     /// \brief Removes a sensor renderer when the entity is removed
     void RemoveSensorRenderer(const gz::sim::Entity &_entity);
 
-    /// \brief Renders a single sensor and publishes its data
-    /*void RenderSensor(const gz::sim::Entity &_entity,
-                      const std::shared_ptr<rtsensor::RtSensor>& _sensor,
-                      const gz::sim::UpdateInfo &_info,
-                      const gz::sim::EntityComponentManager &_ecm,
-                      gz::transport::Node::Publisher &_publisher);*/
-
     /// \brief Checks if the scene has been built
     bool IsSceneInitialized() const;
 
