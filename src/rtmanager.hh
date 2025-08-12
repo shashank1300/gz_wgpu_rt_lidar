@@ -3,7 +3,12 @@
 #include <gz/sim/System.hh>
 #include <gz/sim/Util.hh>
 #include <gz/transport/Node.hh>
+
+#include <condition_variable>
 #include <memory>
+#include <mutex>
+#include <queue>
+#include <thread>
 #include <unordered_map>
 
 #include "rtsensor.hh"
@@ -23,6 +28,19 @@ namespace wgpu_sensor
     /// \brief Initializes the Rust backend runtime
     void Initialize();
 
+    /// \brief Render job struct
+    struct RenderJob
+    {
+      gz::sim::Entity entityId;
+      std::shared_ptr<rtsensor::RtSensor> sensor;
+      gz::math::Pose3d sensorWorldPose;
+      gz::sim::UpdateInfo updateInfo;
+      std::string parentFrameId;
+    };
+
+	/// \brief Adds a render job to the queue
+    void QueueRenderJob(const RenderJob& _job);
+
     /// \brief Builds the initial ray-tracing scene from world geometry
     void BuildScene(const gz::sim::EntityComponentManager &_ecm);
 
@@ -37,11 +55,11 @@ namespace wgpu_sensor
     void RemoveSensorRenderer(const gz::sim::Entity &_entity);
 
     /// \brief Renders a single sensor and publishes its data
-    void RenderSensor(const gz::sim::Entity &_entity,
+    /*void RenderSensor(const gz::sim::Entity &_entity,
                       const std::shared_ptr<rtsensor::RtSensor>& _sensor,
                       const gz::sim::UpdateInfo &_info,
                       const gz::sim::EntityComponentManager &_ecm,
-                      gz::transport::Node::Publisher &_publisher);
+                      gz::transport::Node::Publisher &_publisher);*/
 
     /// \brief Checks if the scene has been built
     bool IsSceneInitialized() const;
@@ -64,5 +82,29 @@ namespace wgpu_sensor
 
     /// \brief Maps a sensor entity to its specific Rust LiDAR renderer
     std::unordered_map<gz::sim::Entity, RtLidar*> rt_lidars;
+
+	/// \brief Initializes transport node
+    gz::transport::Node node;
+
+	/// \brief Stores transport publishers
+    std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> publishers;
+
+    /// \brief The main render loop function
+    void RenderLoop();
+
+    /// \brief The worker thread
+    std::thread workerThread;
+
+    /// \brief Queue holds the render jobs
+    std::queue<RenderJob> jobQueue;
+
+    /// \brief Mutex (lock) protects the queue from being accessed by both threads at once
+    std::mutex queueMutex;
+
+    /// \brief Signals the worker thread that a new job is ready
+    std::condition_variable condition;
+
+    /// \brief Flag tells the thread to stop when we're done
+    bool stopThread{false};
   };
 }

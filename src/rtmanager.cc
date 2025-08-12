@@ -21,10 +21,25 @@
 
 using namespace wgpu_sensor;
 
-RTManager::RTManager() = default;
+RTManager::RTManager()
+{
+  this->workerThread = std::thread(&RTManager::RenderLoop, this);
+}
 
 RTManager::~RTManager()
 {
+  // Tell the thread to stop
+  {
+    std::unique_lock<std::mutex> lock(this->queueMutex);
+    this->stopThread = true;
+  }
+  // Wake up the thread so it can see the stop flag
+  this->condition.notify_one();
+  // Wait for the thread to finish its work and exit
+  if (this->workerThread.joinable())
+  {
+    this->workerThread.join();
+  }
   if (this->rt_scene != nullptr)
   {
     free_rt_scene(this->rt_scene);
@@ -58,6 +73,106 @@ void RTManager::Initialize()
 bool RTManager::IsSceneInitialized() const
 {
   return this->rt_scene != nullptr;
+}
+
+void RTManager::RenderLoop()
+{
+  while (true)
+  {
+    RenderJob job;
+
+    // 1. Wait for a job to become available
+    {
+      std::unique_lock<std::mutex> lock(this->queueMutex);
+      this->condition.wait(lock, [this] {
+        return !this->jobQueue.empty() || this->stopThread;
+      });
+
+      // If we're stopping and there are no jobs, exit the loop
+      if (this->stopThread && this->jobQueue.empty())
+      {
+        return;
+      }
+
+      // Get the next job from the queue
+      job = this->jobQueue.front();
+      this->jobQueue.pop();
+    } // Mutex is unlocked here
+
+    auto pubIt = this->publishers.find(job.entityId);
+    if (pubIt == this->publishers.end())
+    {
+      continue; // No publisher for this entity, skip
+    }
+
+    auto view_matrix = create_view_matrix(
+      static_cast<float>(job.sensorWorldPose.Pos().X()), static_cast<float>(job.sensorWorldPose.Pos().Y()), static_cast<float>(job.sensorWorldPose.Pos().Z()),
+      static_cast<float>(job.sensorWorldPose.Rot().X()), static_cast<float>(job.sensorWorldPose.Rot().Y()), static_cast<float>(job.sensorWorldPose.Rot().Z()), static_cast<float>(job.sensorWorldPose.Rot().W())
+    );
+
+    if (job.sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
+    {
+      auto it = this->rt_depth_cameras.find(job.entityId);
+      if (it == this->rt_depth_cameras.end() || !it->second) return;
+      RtDepthCamera* currentRtCamera = it->second;
+
+      ImageData imageData = render_depth(currentRtCamera, this->rt_scene, this->rt_runtime, view_matrix);
+
+      gz::msgs::Image msg;
+      msg.set_width(imageData.width);
+      msg.set_height(imageData.height);
+      msg.set_pixel_format_type(gz::msgs::PixelFormatType::L_INT16);
+      msg.set_step(imageData.width * sizeof(uint16_t));
+      msg.set_data(imageData.ptr, imageData.len * sizeof(uint16_t));
+      *msg.mutable_header()->mutable_stamp() = gz::msgs::Convert(job.updateInfo.simTime);
+
+      auto frame = msg.mutable_header()->add_data();
+      frame->set_key("frame_id");
+      frame->add_value(job.parentFrameId);
+
+      pubIt->second.Publish(msg);
+      free_image_data(imageData);
+    }
+    else if (job.sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
+    {
+      auto it = this->rt_lidars.find(job.entityId);
+      if (it == this->rt_lidars.end() || !it->second) return;
+      RtLidar* currentRtLidar = it->second;
+
+      RtPointCloud pointCloudData = render_lidar(currentRtLidar, this->rt_scene, this->rt_runtime, view_matrix);
+
+      gz::msgs::PointCloudPacked msg;
+      *msg.mutable_header()->mutable_stamp() = gz::msgs::Convert(job.updateInfo.simTime);
+
+      auto frame = msg.mutable_header()->add_data();
+      frame->set_key("frame_id");
+      frame->add_value(job.parentFrameId);
+
+      msg.set_height(1);
+      const uint32_t num_points = pointCloudData.length / 4; // x,y,z,i
+      msg.set_width(num_points);
+
+      msg.add_field()->set_name("x");
+      msg.add_field()->set_name("y");
+      msg.add_field()->set_name("z");
+      msg.add_field()->set_name("intensity");
+      msg.set_point_step(sizeof(float) * 4);
+      msg.set_data(pointCloudData.points, pointCloudData.length * sizeof(float));
+
+      pubIt->second.Publish(msg);
+      free_pointcloud(&pointCloudData);
+    }
+  free_view_matrix(view_matrix);
+  }
+}
+
+void RTManager::QueueRenderJob(const RenderJob& _job)
+{
+  {
+    std::unique_lock<std::mutex> lock(this->queueMutex);
+    this->jobQueue.push(_job);
+  }
+  this->condition.notify_one();
 }
 
 void RTManager::BuildScene(const gz::sim::EntityComponentManager &_ecm)
@@ -145,6 +260,14 @@ void RTManager::CreateSensorRenderer(const gz::sim::Entity &_entity, const std::
     this->rt_lidars[_entity] = create_rt_lidar(this->rt_runtime, lidarConfig);
     free_lidar_config(lidarConfig);
   }
+  if (_sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
+  {
+    this->publishers[_entity] = this->node.Advertise<gz::msgs::PointCloudPacked>(_sensor->TopicName());
+  }
+  else if (_sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
+  {
+    this->publishers[_entity] = this->node.Advertise<gz::msgs::Image>(_sensor->TopicName());
+  }
 }
 
 void RTManager::RemoveSensorRenderer(const gz::sim::Entity &_entity)
@@ -161,7 +284,7 @@ void RTManager::RemoveSensorRenderer(const gz::sim::Entity &_entity)
   }
 }
 
-void RTManager::RenderSensor(const gz::sim::Entity &_entity,
+/*void RTManager::RenderSensor(const gz::sim::Entity &_entity,
                              const std::shared_ptr<rtsensor::RtSensor>& _sensor,
                              const gz::sim::UpdateInfo &_info,
                              const gz::sim::EntityComponentManager &_ecm,
@@ -239,7 +362,7 @@ void RTManager::RenderSensor(const gz::sim::Entity &_entity,
   }
 
   free_view_matrix(view_matrix);
-}
+}*/
 
 Mesh* RTManager::convertSDFModelToWGPU(const sdf::Geometry& geom)
 {
