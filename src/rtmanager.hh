@@ -31,14 +31,19 @@ namespace wgpu_sensor
     /// \brief Render job struct
     struct RenderJob
     {
+      /// \brief Sensor Entity ID
       gz::sim::Entity entityId;
+      /// \brief RT Sensor parameters
       std::shared_ptr<rtsensor::RtSensor> sensor;
+      /// \brief Sensor World Pose
       gz::math::Pose3d sensorWorldPose;
+      /// \brief The Update Info
       gz::sim::UpdateInfo updateInfo;
+      /// \brief Parent frame ID
       std::string parentFrameId;
     };
 
-	/// \brief Adds a render job to the queue
+	  /// \brief Adds a render job to the queue
     void QueueRenderJob(const RenderJob& _job);
 
     /// \brief Builds the initial ray-tracing scene from world geometry
@@ -76,10 +81,10 @@ namespace wgpu_sensor
     /// \brief Maps a sensor entity to its specific Rust LiDAR renderer
     std::unordered_map<gz::sim::Entity, RtLidar*> rt_lidars;
 
-	/// \brief Initializes transport node
+	  /// \brief Initializes transport node
     gz::transport::Node node;
 
-	/// \brief Stores transport publishers
+	  /// \brief Stores transport publishers
     std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> publishers;
 
     /// \brief The main render loop function

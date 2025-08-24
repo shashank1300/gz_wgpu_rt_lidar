@@ -162,7 +162,7 @@ void RTManager::RenderLoop()
       pubIt->second.Publish(msg);
       free_pointcloud(&pointCloudData);
     }
-  free_view_matrix(view_matrix);
+    free_view_matrix(view_matrix);
   }
 }
 

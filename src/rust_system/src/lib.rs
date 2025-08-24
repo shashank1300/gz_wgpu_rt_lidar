@@ -539,8 +539,11 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
     lidar.lidar.visualize_rays(&scene.rec, &lidar_pose, "lidar_beams");
     scene.rec.log("points", &rerun::Points3D::new(p)).unwrap();
 
+    let mut raw_points: Vec<_> = res.chunks(4).filter(|p| p[3] < Lidar::no_hit_const())
+        .flatten().map(|p| *p).collect();
+
     let point_cloud = RtPointCloud {
-        points: res.as_mut_ptr(),
+        points: raw_points.as_mut_ptr(),
         length: res.len(),
     };
     let elapsed = start_time.elapsed();
