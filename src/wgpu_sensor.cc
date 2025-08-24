@@ -1,11 +1,10 @@
 #include <gz/plugin/Register.hh>
 
 #include <gz/sim/components/CustomSensor.hh>
+#include <gz/sim/components/Name.hh>
 #include <gz/sim/components/ParentEntity.hh>
 #include <gz/sim/System.hh>
 #include <gz/sim/Util.hh>
-
-#include <gz/transport/Node.hh>
 
 #include <memory>
 #include <unordered_map>
@@ -40,11 +39,8 @@ namespace wgpu_sensor
 
     private:
       std::unique_ptr<RTManager> rtManager;
-      std::unordered_map<gz::sim::Entity,
-          std::pair<std::shared_ptr<rtsensor::RtSensor>, gz::transport::Node::Publisher>> entitySensorMap;
+      std::unordered_map<gz::sim::Entity, std::shared_ptr<rtsensor::RtSensor>> entitySensorMap;
 
-
-      gz::transport::Node node; // Gazebo Transport Node
   };
 
   void WGPURtSensor::Configure(const gz::sim::Entity &_entity,
@@ -83,20 +79,10 @@ namespace wgpu_sensor
 
         this->rtManager->CreateSensorRenderer(_entity, sensor);
 
-        gz::transport::Node::Publisher pub;
-        if (sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
-        {
-            pub = this->node.Advertise<gz::msgs::Image>(sensor->TopicName());
-        }
-        else if (sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
-        {
-            pub = this->node.Advertise<gz::msgs::PointCloudPacked>(sensor->TopicName());
-        }
-        this->entitySensorMap[_entity] = std::make_pair(sensor, pub);
+        this->entitySensorMap[_entity] = sensor;
 
         return true;
       });
-
   }
 
   void WGPURtSensor::PostUpdate(const gz::sim::UpdateInfo &_info,
@@ -111,52 +97,46 @@ namespace wgpu_sensor
     if (!this->rtManager->IsSceneInitialized())
     {
       this->rtManager->BuildScene(_ecm);
-
     }
-    else
+
+    bool shouldUpdate = false;
+
+    for (auto const& [entityId, sensor] : this->entitySensorMap)
     {
-      bool shouldUpdate = false;
-      for (auto const& [entityId, pair] : this->entitySensorMap)
-      {
-        auto const& sensor = pair.first;
-        auto update_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-            std::chrono::duration<double>(1.0 / sensor->UpdateRate()));
-        if ((_info.simTime - sensor->lastUpdateTime) >= update_period)
-        {
-          shouldUpdate = true;
-          break;
-
-        }
-      }
-
-      if (!shouldUpdate)
-      {
-          return; // No sensors need updating, skip
-      }
-
-      this->rtManager->UpdateTransforms(_ecm);
-
-    for (auto & [entityId, pair] : this->entitySensorMap)
-    {
-      auto & sensor = pair.first;
-      auto & publisher = pair.second;
       auto update_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
           std::chrono::duration<double>(1.0 / sensor->UpdateRate()));
 
       if ((_info.simTime - sensor->lastUpdateTime) >= update_period)
       {
+        shouldUpdate = true;
         sensor->lastUpdateTime = _info.simTime;
-        this->rtManager->RenderSensor(entityId, sensor, _info, _ecm, publisher);
+
+        RTManager::RenderJob job;
+        job.entityId = entityId;
+        job.sensor = sensor;
+        job.sensorWorldPose = gz::sim::worldPose(sensor->ParentEntity(), _ecm);
+        job.updateInfo = _info;
+
+        auto parentNameComp = _ecm.Component<gz::sim::components::Name>(sensor->ParentEntity());
+        if(parentNameComp)
+        {
+          job.parentFrameId = parentNameComp->Data();
+        }
+        this->rtManager->QueueRenderJob(job);
       }
     }
-  }
+
+    if (shouldUpdate)
+    {
+      this->rtManager->UpdateTransforms(_ecm);
+    }
   }
 
   void WGPURtSensor::RemoveSensorEntities(
       const gz::sim::EntityComponentManager &_ecm)
   {
     _ecm.EachRemoved<gz::sim::components::CustomSensor>(
-      [&](const gz::sim::Entity &_entity,
+      [this](const gz::sim::Entity &_entity,
           const auto*) -> bool
       {
         if (this->entitySensorMap.count(_entity))

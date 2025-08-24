@@ -57,7 +57,6 @@ pub struct InstanceWrapper {
 
 #[no_mangle]
 pub extern "C" fn create_instance_wrapper(asset_index: usize, x: f32, y: f32, z:f32, qx:f32, qy:f32, qz:f32, qw:f32) -> *mut InstanceWrapper {
-    println!("asset_index: {}, x: {}, y: {}, z: {}, qx: {}, qy: {}, qz: {}, qw: {}", asset_index, x, y, z, qx, qy, qz, qw);
     Box::into_raw(Box::new(InstanceWrapper {
             instance: Instance{
                 asset_mesh_index: asset_index,
@@ -256,7 +255,7 @@ pub extern "C" fn set_transforms(ptr: *mut RtScene, device: *mut RtRuntime, upda
         assert!(!updates.is_null());
         &mut *updates
     };
-    println!("Setting transforms {:?}", updates.updates);
+    //println!("Setting transforms {:?}", updates.updates);
     futures::executor::block_on(scene.scene.set_transform(&device.device, &device.queue, &updates.updates, &updates.indices));
 
     scene.scene.visualize(&scene.rec);
@@ -360,7 +359,7 @@ pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, run
     std::mem::forget(boxed_data); // Prevent Rust from deallocating the memory
 
     let elapsed2 = start_time.elapsed();
-    println!("Render time for CAMERA: {:.2}ms", elapsed2.as_secs_f64() * 1000.0);
+    //println!("Render time for CAMERA: {:.2}ms", elapsed2.as_secs_f64() * 1000.0);
 
     // Return the image data struct
     ImageData { ptr: data_ptr, len: data_len, width, height }
@@ -524,10 +523,10 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
     let lidar_pose = Affine3A::from_mat4(view.view);
 
     let start_time = Instant::now();
-    scene.scene.visualize(&scene.rec);
+    //scene.scene.visualize(&scene.rec);
     let mut res = futures::executor::block_on(lidar.lidar.render_lidar_pointcloud(&scene.scene, &runtime.device, &runtime.queue, &lidar_pose));
 
-    println!("Number of points rendered: {}", res.len());
+    //println!("Number of points rendered: {}", res.len());
     //println!("Points: {:?}", res);
     let p = res
       .chunks(4)
@@ -540,12 +539,15 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
     lidar.lidar.visualize_rays(&scene.rec, &lidar_pose, "lidar_beams");
     scene.rec.log("points", &rerun::Points3D::new(p)).unwrap();
 
+    let mut raw_points: Vec<_> = res.chunks(4).filter(|p| p[3] < Lidar::no_hit_const())
+        .flatten().map(|p| *p).collect();
+
     let point_cloud = RtPointCloud {
-        points: res.as_mut_ptr(),
+        points: raw_points.as_mut_ptr(),
         length: res.len(),
     };
     let elapsed = start_time.elapsed();
-    println!("Render time for LiDAR: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
+    //println!("Render time for LiDAR: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
     // Prevent the vector from being deallocated
     std::mem::forget(res);
 
