@@ -131,7 +131,6 @@ void RTManager::RenderLoop()
       frame->add_value(job.parentFrameId);
 
       pubIt->second.Publish(msg);
-      free_image_data(imageData);
     }
     else if (job.sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
     {
@@ -160,7 +159,6 @@ void RTManager::RenderLoop()
       msg.set_data(pointCloudData.points, pointCloudData.length * sizeof(float));
 
       pubIt->second.Publish(msg);
-      free_pointcloud(&pointCloudData);
     }
     free_view_matrix(view_matrix);
   }
