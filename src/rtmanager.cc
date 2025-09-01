@@ -128,7 +128,8 @@ void RTManager::RenderLoop()
 
       auto frame = msg.mutable_header()->add_data();
       frame->set_key("frame_id");
-      frame->add_value(job.parentFrameId);      
+      frame->add_value(job.parentFrameId);
+      
       pubIt->second.Publish(msg);
     }
     else if (job.sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
