@@ -81,8 +81,11 @@ namespace wgpu_sensor
     /// \brief Maps a sensor entity to its specific Rust LiDAR renderer
     std::unordered_map<gz::sim::Entity, RtLidar*> rt_lidars;
 
+	  /// \brief Initializes transport node
+    gz::transport::Node node;
+
 	  /// \brief Stores transport publishers
-    std::unordered_map<gz::sim::Entity, std::string> publishers;
+    std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> publishers;
 
     /// \brief The main render loop function
     void RenderLoop();
