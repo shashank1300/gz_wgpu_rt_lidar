@@ -3,8 +3,10 @@
   <world name="demo">
 
     <plugin
-      filename="wgpu_rt_sensor" name="wgpu_sensor::WGPURtSensor"/>
-
+      filename="gz-sim-sensors-system"
+      name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
     <plugin filename="gz-sim-physics-system"
             name="gz::sim::systems::Physics">
     </plugin>
@@ -66,7 +68,7 @@
         </visual>
 
         <!-- Custom Camera Sensor -->
-        <sensor name="my_rt_camera" type="custom" gz:type="rt_camera">
+        <!--<sensor name="my_rt_camera" type="custort_camera">
           <pose>0 0 0 0 0 0</pose>
           <always_on>1</always_on>
           <update_rate>10</update_rate>
@@ -82,11 +84,11 @@
               <far>100</far>
             </camera>
           </gz:rt_camera>
-        </sensor>
+        </sensor>-->
       </link>
     </model>
-
-    <model name="lidar">
+    
+    <model name="lidar1">
       <pose>0 0 1.0 0 0 0</pose>
       <static>true</static>
       <link name="link">
@@ -102,14 +104,14 @@
         </visual>
 
         <!-- Custom Lidar Sensor -->
-        <sensor name="my_rt_lidar" type="custom" gz:type="rt_lidar">
+        <!--<sensor name="my_rt_lidar" type="custom" gz:type="rt_lidar">
           <always_on>1</always_on>
-          <update_rate>10</update_rate>
+          <update_rate>30</update_rate>
           <topic>/my_robot/lidar/points</topic>
           <gz:rt_lidar>
             <scan>
               <lasers>16</lasers>
-              <steps>3600</steps>
+              <steps>360</steps>
               <vertical>
                 <min_angle>-0.2617</min_angle>
                 <max_angle>0.2617</max_angle>
@@ -131,9 +133,127 @@
               <stddev>0.01</stddev>
             </noise>
           </gz:rt_lidar>
+        </sensor>-->
+
+        <sensor name="lidar" type="gpu_lidar">
+        
+          <always_on>1</always_on>
+          <update_rate>30</update_rate>
+          <lidar>
+            <scan>
+              <vertical>
+                <samples>16</samples>
+                <min_angle>-0.2617</min_angle>
+                <max_angle>0.2617</max_angle>
+
+<resolution>1</resolution>
+              </vertical>
+              <horizontal>
+                <min_angle>-3.1415</min_angle>
+                <max_angle>3.1415</max_angle>
+                <samples>6400</samples>
+                <resolution>1</resolution>
+              </horizontal>
+            </scan>
+            <range>
+              <min>0.1</min>
+              <max>100.0</max>
+            </range>
+            <noise>
+              <type>gaussian</type>
+              <mean>0.0</mean>
+              <stddev>0.01</stddev>
+            </noise>
+          </lidar>
         </sensor>
       </link>
     </model>
+
+
+
+
+    <model name="lidar2">
+      <pose>0 0 1.0 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.1 0.1 0.1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+          </material>
+        </visual>
+
+        <!-- Custom Lidar Sensor -->
+        <!--<sensor name="my_rt_lidar" type="custom" gz:type="rt_lidar">
+          <always_on>1</always_on>
+          <update_rate>30</update_rate>
+          <topic>/my_robot/lidar/points</topic>
+          <gz:rt_lidar>
+            <scan>
+              <lasers>16</lasers>
+              <steps>360</steps>
+              <vertical>
+                <min_angle>-0.2617</min_angle>
+                <max_angle>0.2617</max_angle>
+                <step>0.1</step>
+              </vertical>
+              <horizontal>
+                <min_angle>-3.1415</min_angle>
+                <max_angle>3.1415</max_angle>
+                <step>0.01</step>
+              </horizontal>
+            </scan>
+            <range>
+              <min>0.1</min>
+              <max>100.0</max>
+            </range>
+            <noise>
+              <type>gaussian</type>
+              <mean>0.0</mean>
+              <stddev>0.01</stddev>
+            </noise>
+          </gz:rt_lidar>
+        </sensor>-->
+
+        <sensor name="lidar" type="gpu_lidar">
+        
+          <always_on>1</always_on>
+          <update_rate>30</update_rate>
+          <lidar>
+            <scan>
+              <vertical>
+                <samples>16</samples>
+                <min_angle>-0.2617</min_angle>
+                <max_angle>0.2617</max_angle>
+
+<resolution>1</resolution>
+              </vertical>
+              <horizontal>
+                <min_angle>-3.1415</min_angle>
+                <max_angle>3.1415</max_angle>
+                <samples>6400</samples>
+                <resolution>1</resolution>
+              </horizontal>
+            </scan>
+            <range>
+              <min>0.1</min>
+              <max>100.0</max>
+            </range>
+            <noise>
+              <type>gaussian</type>
+              <mean>0.0</mean>
+              <stddev>0.01</stddev>
+            </noise>
+          </lidar>
+        </sensor>
+      </link>
+    </model>
+
+
 
     <model name="ground_plane">
       <static>true</static>

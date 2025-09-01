@@ -69,7 +69,7 @@ namespace rtsensor
     private: gz::math::Pose3d currentPose{gz::math::Pose3d::Zero};
 
     /// \brief The last update time of the sensor.
-	  public: std::chrono::steady_clock::duration lastUpdateTime{0};
+    public: std::chrono::steady_clock::duration lastUpdateTime{0};
 
     /// \brief Configuration parameters for the sensor.
     public: struct Config
