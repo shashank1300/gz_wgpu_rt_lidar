@@ -209,7 +209,7 @@ pub extern "C" fn free_rt_scene_update(ptr: *mut RtSceneUpdate)
 #[repr(C)]
 pub struct RtScene {
     scene: wgpu_rt_lidar::RayTraceScene,
-    rec: rerun::RecordingStream
+    //rec: rerun::RecordingStream
 }
 
 #[no_mangle]
@@ -224,9 +224,9 @@ pub extern "C" fn create_rt_scene(runtime: *mut RtRuntime, builder: *mut RtScene
         &mut *builder
     };
 
-    let rec = rerun::RecordingStreamBuilder::new("debug_viz")
-      .spawn()
-      .unwrap();
+    //let rec = rerun::RecordingStreamBuilder::new("debug_viz")
+    //  .spawn()
+    //  .unwrap();
     let scene = 
      futures::executor::block_on(
         wgpu_rt_lidar::RayTraceScene::new(
@@ -237,7 +237,7 @@ pub extern "C" fn create_rt_scene(runtime: *mut RtRuntime, builder: *mut RtScene
             &builder.instances));
     Box::into_raw(Box::new(RtScene {
         scene,
-        rec
+        //rec
     }))
 }
 
@@ -258,7 +258,7 @@ pub extern "C" fn set_transforms(ptr: *mut RtScene, device: *mut RtRuntime, upda
     //println!("Setting transforms {:?}", updates.updates);
     futures::executor::block_on(scene.scene.set_transform(&device.device, &device.queue, &updates.updates, &updates.indices));
 
-    scene.scene.visualize(&scene.rec);
+    //scene.scene.visualize(&scene.rec);
 }
 
 #[no_mangle]
@@ -524,8 +524,10 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
 
     let start_time = Instant::now();
     //scene.scene.visualize(&scene.rec);
-    let mut res = futures::executor::block_on(lidar.lidar.render_lidar_pointcloud(&scene.scene, &runtime.device, &runtime.queue, &lidar_pose));
-
+    let mut res = futures::executor::block_on(
+        lidar.lidar.render_lidar_pointcloud(&scene.scene, &runtime.device, &runtime.queue, &lidar_pose));
+    let elapsed = start_time.elapsed();
+    println!("Render time for LiDAR: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
     //println!("Number of points rendered: {}", res.len());
     //println!("Points: {:?}", res);
     let p = res
@@ -536,20 +538,19 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
             .transform_point3(Vec3::new(p[0], p[1], p[2]))
             .to_array()
       });
-    lidar.lidar.visualize_rays(&scene.rec, &lidar_pose, "lidar_beams");
-    scene.rec.log("points", &rerun::Points3D::new(p)).unwrap();
+    //lidar.lidar.visualize_rays(&scene.rec, &lidar_pose, "lidar_beams");
+    //scene.rec.log("points", &rerun::Points3D::new(p)).unwrap();
 
-    let mut raw_points: Vec<_> = res.chunks(4).filter(|p| p[3] < Lidar::no_hit_const())
+    let mut raw_points: Vec<f32> = res.chunks(4).filter(|p| p[3] < Lidar::no_hit_const())
         .flatten().map(|p| *p).collect();
 
     let point_cloud = RtPointCloud {
         points: raw_points.as_mut_ptr(),
-        length: res.len(),
+        length: raw_points.len(),
     };
-    let elapsed = start_time.elapsed();
     //println!("Render time for LiDAR: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
     // Prevent the vector from being deallocated
-    std::mem::forget(res);
+    std::mem::forget(raw_points);
 
     point_cloud
 }

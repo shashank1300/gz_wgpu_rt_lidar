@@ -129,8 +129,8 @@ void RTManager::RenderLoop()
       auto frame = msg.mutable_header()->add_data();
       frame->set_key("frame_id");
       frame->add_value(job.parentFrameId);
-
-      pubIt->second.Publish(msg);
+      
+      //pubIt->second.Publish(msg);
     }
     else if (job.sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
     {
@@ -156,9 +156,10 @@ void RTManager::RenderLoop()
       msg.add_field()->set_name("z");
       msg.add_field()->set_name("intensity");
       msg.set_point_step(sizeof(float) * 4);
+
       msg.set_data(pointCloudData.points, pointCloudData.length * sizeof(float));
 
-      pubIt->second.Publish(msg);
+      //pubIt->second.Publish(msg);
     }
     free_view_matrix(view_matrix);
   }
@@ -260,11 +261,11 @@ void RTManager::CreateSensorRenderer(const gz::sim::Entity &_entity, const std::
   }
   if (_sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
   {
-    this->publishers[_entity] = this->node.Advertise<gz::msgs::PointCloudPacked>(_sensor->TopicName());
+    this->publishers[_entity] = _sensor->TopicName();
   }
   else if (_sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
   {
-    this->publishers[_entity] = this->node.Advertise<gz::msgs::Image>(_sensor->TopicName());
+    this->publishers[_entity] = _sensor->TopicName();
   }
 }
 
