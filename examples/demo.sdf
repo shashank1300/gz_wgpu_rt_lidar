@@ -104,12 +104,12 @@
         <!-- Custom Lidar Sensor -->
         <sensor name="my_rt_lidar" type="custom" gz:type="rt_lidar">
           <always_on>1</always_on>
-          <update_rate>30</update_rate>
+          <update_rate>10</update_rate>
           <topic>/my_robot/lidar/points</topic>
           <gz:rt_lidar>
             <scan>
               <lasers>16</lasers>
-              <steps>360</steps>
+              <steps>3600</steps>
               <vertical>
                 <min_angle>-0.2617</min_angle>
                 <max_angle>0.2617</max_angle>
