@@ -359,7 +359,7 @@ pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, run
     std::mem::forget(boxed_data); // Prevent Rust from deallocating the memory
 
     let elapsed2 = start_time.elapsed();
-    //println!("Render time for CAMERA: {:.2}ms", elapsed2.as_secs_f64() * 1000.0);
+    println!("Render time for CAMERA: {:.2}ms", elapsed2.as_secs_f64() * 1000.0);
 
     // Return the image data struct
     ImageData { ptr: data_ptr, len: data_len, width, height }
@@ -547,7 +547,7 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
         length: res.len(),
     };
     let elapsed = start_time.elapsed();
-    //println!("Render time for LiDAR: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
+    println!("Render time for LiDAR: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
     // Prevent the vector from being deallocated
     std::mem::forget(res);
 
