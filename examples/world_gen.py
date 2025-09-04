@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
 import argparse
 import math
 import sys
 
-# Defaults aligned with the repo examples (mesh URI/scale, RT lidar params).
 MESH_URI = "meshes/hatchback.obj"
 MESH_SCALE = "0.0254 0.0254 0.0254"
 
@@ -115,6 +113,48 @@ def hatch_model(i, j, x, y, color):
     </model>
 """
 
+def box(i, j, x, y, color):
+    rgba = "0 0 1 1" if color == "blue" else "1 0 0 1"
+    name = f"box_{i}_{j}_{color}"
+    return f"""
+    <model name="{name}">
+      <pose>{x:.3f} {y:.3f} 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="box_link">
+        <inertial>
+          <inertia>
+            <ixx>0.16666</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.16666</iyy>
+            <iyz>0</iyz>
+            <izz>0.16666</izz>
+          </inertia>
+          <mass>1.0</mass>
+        </inertial>
+        <collision name="box_collision">
+          <geometry>
+            <box>
+              <size>2 2 2</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="box_visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>{rgba}</ambient>
+            <diffuse>{rgba}</diffuse>
+            <specular>{rgba}</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+"""
+
 def gazebo_lidar(idx, x, y, z=1.0, topic_prefix="/lidar/gz"):
     return f"""
     <model name="gazebo_lidar_{idx}">
@@ -204,6 +244,7 @@ def distribute_points(n, minx, maxx, miny, maxy):
 
 def main():
     p = argparse.ArgumentParser()
+    p.add_argument("--geometry", choices=["car", "box"], default="box")
     p.add_argument("--row", type=int, default=10)
     p.add_argument("--col", type=int, default=10)
     p.add_argument("--spacing", type=float, default=5.0)
@@ -230,7 +271,10 @@ def main():
             x = start_x + i * args.spacing
             y = start_y + j * args.spacing
             color = "blue" if ((i + j) % 2 == 0) else "red"
-            sys.stdout.write(hatch_model(i, j, x, y, color))
+            if args.geometry == "box":
+                sys.stdout.write(box(i, j, x, y, color))
+            else:
+                sys.stdout.write(hatch_model(i, j, x, y, color))
 
     # Lidar placement across grid footprint
     pts = distribute_points(args.lidars, minx, maxx, miny, maxy)
