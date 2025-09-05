@@ -155,7 +155,7 @@ def box(i, j, x, y, color):
     </model>
 """
 
-def gazebo_lidar(idx, x, y, z=1.0, topic_prefix="/lidar/gz"):
+def gazebo_lidar(idx, x, y, z=1.0, topic_prefix="/lidar/gz", steps=360):
     return f"""
     <model name="gazebo_lidar_{idx}">
       <pose>{x:.3f} {y:.3f} {z:.3f} 0 0 0</pose>
@@ -179,7 +179,7 @@ def gazebo_lidar(idx, x, y, z=1.0, topic_prefix="/lidar/gz"):
               <horizontal>
                 <min_angle>-3.1415</min_angle>
                 <max_angle>3.1415</max_angle>
-                <samples>1024</samples>
+                <samples>{steps}</samples>
                 <resolution>1</resolution>
               </horizontal>
             </scan>
@@ -192,7 +192,7 @@ def gazebo_lidar(idx, x, y, z=1.0, topic_prefix="/lidar/gz"):
     </model>
 """
 
-def rt_lidar(idx, x, y, z=1.0, topic_prefix="/lidar/rt"):
+def rt_lidar(idx, x, y, z=1.0, topic_prefix="/lidar/rt", steps=360):
     return f"""
     <model name="rt_lidar_{idx}">
       <pose>{x:.3f} {y:.3f} {z:.3f} 0 0 0</pose>
@@ -209,7 +209,7 @@ def rt_lidar(idx, x, y, z=1.0, topic_prefix="/lidar/rt"):
           <gz:rt_lidar>
             <scan>
               <lasers>16</lasers>
-              <steps>360</steps>
+              <steps>{steps}</steps>
               <vertical>
                 <min_angle>-0.2617</min_angle>
                 <max_angle>0.2617</max_angle>
@@ -251,8 +251,9 @@ def main():
     p.add_argument("--ground", type=float, default=100.0)
     p.add_argument("--sensor", choices=["gazebo", "rt"], default="rt")
     p.add_argument("--lidars", type=int, default=4)
-    p.add_argument("--z_lidar", type=float, default=3.0)
+    p.add_argument("--z_lidar", type=float, default=1.0)
     p.add_argument("--topic_prefix", type=str, default="/lidar")
+    p.add_argument("--samples", type=int, default=360)
     args = p.parse_args()
 
     sys.stdout.write(world_header())
@@ -280,9 +281,9 @@ def main():
     pts = distribute_points(args.lidars, minx, maxx, miny, maxy)
     for idx, (x, y) in enumerate(pts):
         if args.sensor == "gazebo":
-            sys.stdout.write(gazebo_lidar(idx, x, y, args.z_lidar, topic_prefix=f"{args.topic_prefix}/gazebo"))
+            sys.stdout.write(gazebo_lidar(idx, x, y, args.z_lidar, topic_prefix=f"{args.topic_prefix}/gazebo", steps=args.samples))
         else:
-            sys.stdout.write(rt_lidar(idx, x, y, args.z_lidar, topic_prefix=f"{args.topic_prefix}/rt"))
+            sys.stdout.write(rt_lidar(idx, x, y, args.z_lidar, topic_prefix=f"{args.topic_prefix}/rt", steps=args.samples))
 
     sys.stdout.write(world_footer())
 
