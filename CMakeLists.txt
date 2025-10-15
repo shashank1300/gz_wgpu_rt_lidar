@@ -23,6 +23,11 @@ find_package(gz-math REQUIRED)
 find_package(gz_sensors_vendor REQUIRED)
 find_package(gz-sensors REQUIRED)
 
+find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+
 #============================================================================
 # Corrosion
 include(FetchContent)
@@ -58,6 +63,13 @@ target_link_libraries(wgpu_rt_sensor PUBLIC
         gz-common::graphics
         gz-math::gz-math
         gz-sensors::gz-sensors
+)
+
+ament_target_dependencies(wgpu_rt_sensor PUBLIC
+        rclcpp
+        sensor_msgs
+        tf2_ros
+        tf2_geometry_msgs
 )
 
 install(TARGETS wgpu_rt_sensor DESTINATION lib)

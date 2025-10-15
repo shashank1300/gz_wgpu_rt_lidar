@@ -122,6 +122,15 @@ namespace wgpu_sensor
         {
           job.parentFrameId = parentNameComp->Data();
         }
+
+        auto parentEntity = sensor->ParentEntity();
+        auto modelEntity = gz::sim::topLevelModel(parentEntity, _ecm);
+        auto modelNameComp = _ecm.Component<gz::sim::components::Name>(modelEntity);
+        if (modelNameComp)
+        {
+          job.modelName = modelNameComp->Data();
+        }
+
         this->rtManager->QueueRenderJob(job);
       }
     }

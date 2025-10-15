@@ -4,6 +4,12 @@
 #include <gz/sim/Util.hh>
 #include <gz/transport/Node.hh>
 
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <tf2_ros/transform_broadcaster.h>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -41,6 +47,8 @@ namespace wgpu_sensor
       gz::sim::UpdateInfo updateInfo;
       /// \brief Parent frame ID
       std::string parentFrameId;
+      /// \brief Model name for TF hierarchy
+      std::string modelName;
     };
 
 	  /// \brief Adds a render job to the queue
@@ -81,10 +89,20 @@ namespace wgpu_sensor
     /// \brief Maps a sensor entity to its specific Rust LiDAR renderer
     std::unordered_map<gz::sim::Entity, RtLidar*> rt_lidars;
 
-	  /// \brief Initializes transport node
+    // NEW: ROS 2 Node
+    std::shared_ptr<rclcpp::Node> ros_node;
+
+    // NEW: ROS 2 Publishers
+    std::unordered_map<gz::sim::Entity, rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr> ros_pointcloud_publishers;
+    std::unordered_map<gz::sim::Entity, rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr> ros_image_publishers;
+
+    // NEW: TF Broadcaster
+    std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
+
+	/// \brief Initializes transport node
     gz::transport::Node node;
 
-	  /// \brief Stores transport publishers
+	/// \brief Stores transport publishers
     std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> publishers;
 
     /// \brief The main render loop function

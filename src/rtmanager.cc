@@ -19,10 +19,20 @@
 #include <sdf/Mesh.hh>
 #include <sdf/Plane.hh>
 
+#include <sensor_msgs/point_cloud2_iterator.hpp>
+#include <builtin_interfaces/msg/time.hpp>
+
 using namespace wgpu_sensor;
 
 RTManager::RTManager()
 {
+  if (!rclcpp::ok())
+  {
+    rclcpp::init(0, nullptr);
+  }
+  this->ros_node = std::make_shared<rclcpp::Node>("wgpu_rt_sensor_node");
+  this->tf_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(this->ros_node);
+
   this->workerThread = std::thread(&RTManager::RenderLoop, this);
 }
 
@@ -105,6 +115,22 @@ void RTManager::RenderLoop()
       continue; // No publisher for this entity, skip
     }
 
+    geometry_msgs::msg::TransformStamped transform_stamped;
+    transform_stamped.header.stamp.sec = std::chrono::duration_cast<std::chrono::seconds>(job.updateInfo.simTime).count();
+    transform_stamped.header.stamp.nanosec = std::chrono::duration_cast<std::chrono::nanoseconds>(job.updateInfo.simTime).count() % 1000000000;
+    transform_stamped.header.frame_id = "world";
+    transform_stamped.child_frame_id = job.parentFrameId;
+
+    transform_stamped.transform.translation.x = job.sensorWorldPose.Pos().X();
+    transform_stamped.transform.translation.y = job.sensorWorldPose.Pos().Y();
+    transform_stamped.transform.translation.z = job.sensorWorldPose.Pos().Z();
+    transform_stamped.transform.rotation.x = job.sensorWorldPose.Rot().X();
+    transform_stamped.transform.rotation.y = job.sensorWorldPose.Rot().Y();
+    transform_stamped.transform.rotation.z = job.sensorWorldPose.Rot().Z();
+    transform_stamped.transform.rotation.w = job.sensorWorldPose.Rot().W();
+
+    this->tf_broadcaster->sendTransform(transform_stamped);
+
     auto view_matrix = create_view_matrix(
       static_cast<float>(job.sensorWorldPose.Pos().X()), static_cast<float>(job.sensorWorldPose.Pos().Y()), static_cast<float>(job.sensorWorldPose.Pos().Z()),
       static_cast<float>(job.sensorWorldPose.Rot().X()), static_cast<float>(job.sensorWorldPose.Rot().Y()), static_cast<float>(job.sensorWorldPose.Rot().Z()), static_cast<float>(job.sensorWorldPose.Rot().W())
@@ -131,6 +157,24 @@ void RTManager::RenderLoop()
       frame->add_value(job.parentFrameId);
 
       pubIt->second.Publish(msg);
+
+      auto ros_pub_it = this->ros_image_publishers.find(job.entityId);
+      if (ros_pub_it != this->ros_image_publishers.end())
+      {
+        sensor_msgs::msg::Image ros_msg;
+        ros_msg.header.stamp.sec = std::chrono::duration_cast<std::chrono::seconds>(job.updateInfo.simTime).count();
+        ros_msg.header.stamp.nanosec = std::chrono::duration_cast<std::chrono::nanoseconds>(job.updateInfo.simTime).count() % 1000000000;
+        ros_msg.header.frame_id = job.parentFrameId;
+        ros_msg.height = imageData.height;
+        ros_msg.width = imageData.width;
+        ros_msg.encoding = "16UC1"; // 16-bit unsigned single channel
+        ros_msg.is_bigendian = false;
+        ros_msg.step = imageData.width * sizeof(uint16_t);
+        ros_msg.data.resize(imageData.len * sizeof(uint16_t));
+        std::memcpy(ros_msg.data.data(), imageData.ptr, imageData.len * sizeof(uint16_t));
+
+        ros_pub_it->second->publish(ros_msg);
+      }
     }
     else if (job.sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
     {
@@ -159,6 +203,43 @@ void RTManager::RenderLoop()
       msg.set_data(pointCloudData.points, pointCloudData.length * sizeof(float));
 
       pubIt->second.Publish(msg);
+
+      auto ros_pub_it = this->ros_pointcloud_publishers.find(job.entityId);
+      if (ros_pub_it != this->ros_pointcloud_publishers.end())
+      {
+        sensor_msgs::msg::PointCloud2 ros_msg;
+        ros_msg.header.stamp.sec = std::chrono::duration_cast<std::chrono::seconds>(job.updateInfo.simTime).count();
+        ros_msg.header.stamp.nanosec = std::chrono::duration_cast<std::chrono::nanoseconds>(job.updateInfo.simTime).count() % 1000000000;
+        ros_msg.header.frame_id = job.parentFrameId;
+        ros_msg.height = 1;
+        ros_msg.width = pointCloudData.length / 4; // x,y,z,intensity
+        ros_msg.is_bigendian = false;
+        ros_msg.is_dense = false;
+
+        sensor_msgs::PointCloud2Modifier modifier(ros_msg);
+        modifier.setPointCloud2Fields(4,
+        "x", 1, sensor_msgs::msg::PointField::FLOAT32,
+        "y", 1, sensor_msgs::msg::PointField::FLOAT32,
+        "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+        "intensity", 1, sensor_msgs::msg::PointField::FLOAT32);
+
+        modifier.resize(ros_msg.width);
+
+        sensor_msgs::PointCloud2Iterator<float> iter_x(ros_msg, "x");
+        sensor_msgs::PointCloud2Iterator<float> iter_y(ros_msg, "y");
+        sensor_msgs::PointCloud2Iterator<float> iter_z(ros_msg, "z");
+        sensor_msgs::PointCloud2Iterator<float> iter_intensity(ros_msg, "intensity");
+
+        for (size_t i = 0; i < ros_msg.width; ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_intensity)
+        {
+          *iter_x = pointCloudData.points[i * 4 + 0];
+          *iter_y = pointCloudData.points[i * 4 + 1];
+          *iter_z = pointCloudData.points[i * 4 + 2];
+          *iter_intensity = pointCloudData.points[i * 4 + 3];
+        }
+
+        ros_pub_it->second->publish(ros_msg);
+      }
     }
     free_view_matrix(view_matrix);
   }
@@ -261,10 +342,18 @@ void RTManager::CreateSensorRenderer(const gz::sim::Entity &_entity, const std::
   if (_sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
   {
     this->publishers[_entity] = this->node.Advertise<gz::msgs::PointCloudPacked>(_sensor->TopicName());
+    this->ros_pointcloud_publishers[_entity] = this->ros_node->create_publisher<sensor_msgs::msg::PointCloud2>(
+      _sensor->TopicName(),
+      rclcpp::SensorDataQoS()
+    );
   }
   else if (_sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
   {
     this->publishers[_entity] = this->node.Advertise<gz::msgs::Image>(_sensor->TopicName());
+    this->ros_image_publishers[_entity] = this->ros_node->create_publisher<sensor_msgs::msg::Image>(
+      _sensor->TopicName(),
+      rclcpp::SensorDataQoS()
+    );
   }
 }
 
