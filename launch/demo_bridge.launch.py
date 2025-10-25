@@ -30,7 +30,6 @@ def generate_launch_description():
 
     # Launch arguments
     world_file = LaunchConfiguration('world_file')
-    
     declare_world_file_cmd = DeclareLaunchArgument(
         'world_file',
         default_value=PathJoinSubstitution([

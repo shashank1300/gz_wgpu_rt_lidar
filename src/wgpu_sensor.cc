@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2025 Arjo Chakravarty, Shashank Rao
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
 #include <gz/plugin/Register.hh>
 
 #include <gz/sim/components/CustomSensor.hh>
@@ -15,139 +32,136 @@
 
 namespace wgpu_sensor
 {
-  /// \brief A plugin that validates target identification reports.
-  class WGPURtSensor :
-    public gz::sim::System,
-    public gz::sim::ISystemConfigure,
-    public gz::sim::ISystemPreUpdate,
-    public gz::sim::ISystemPostUpdate
+/// \brief A plugin that validates target identification reports.
+class WGPURtSensor:
+public gz::sim::System,
+public gz::sim::ISystemConfigure,
+public gz::sim::ISystemPreUpdate,
+public gz::sim::ISystemPostUpdate
+{
+  // Documentation inherited
+public: void Configure(
+    const gz::sim::Entity & _entity,
+    const std::shared_ptr < const sdf::Element > &_sdf,
+    gz::sim::EntityComponentManager & _ecm,
+    gz::sim::EventManager & _eventMgr) override;
+
+public: void PreUpdate(
+    const gz::sim::UpdateInfo & _info,
+    gz::sim::EntityComponentManager & _ecm) override;
+
+  // Documentation inherited
+public: void PostUpdate(
+    const gz::sim::UpdateInfo & _info,
+    const gz::sim::EntityComponentManager & _ecm) override;
+
+public: void RemoveSensorEntities(const gz::sim::EntityComponentManager & _ecm);
+
+private:
+  std::unique_ptr < RTManager > rtManager;
+  std::unordered_map < gz::sim::Entity, std::shared_ptr < rtsensor::RtSensor >> entitySensorMap;
+
+};
+
+void WGPURtSensor::Configure(
+  const gz::sim::Entity & _entity,
+  const std::shared_ptr < const sdf::Element > &_sdf,
+  gz::sim::EntityComponentManager & _ecm,
+  gz::sim::EventManager & _eventMgr)
+{
+  this->rtManager = std::make_unique < RTManager > ();
+  this->rtManager->Initialize();
+}
+
+void WGPURtSensor::PreUpdate(
+  const gz::sim::UpdateInfo & _info,
+  gz::sim::EntityComponentManager & _ecm)
+{
+  _ecm.EachNew < gz::sim::components::CustomSensor,
+  gz::sim::components::ParentEntity > (
+    [&](const gz::sim::Entity & _entity,
+    const gz::sim::components::CustomSensor *_custom,
+    const gz::sim::components::ParentEntity *_parent)->bool
   {
-    // Documentation inherited
-    public: void Configure(const gz::sim::Entity &_entity,
-                           const std::shared_ptr<const sdf::Element> &_sdf,
-                           gz::sim::EntityComponentManager &_ecm,
-                           gz::sim::EventManager &_eventMgr) override;
+    sdf::Sensor data = _custom->Data();
 
-    public: void PreUpdate(const gz::sim::UpdateInfo &_info,
-                           gz::sim::EntityComponentManager &_ecm) override;
-
-    // Documentation inherited
-    public: void PostUpdate(const gz::sim::UpdateInfo &_info,
-                            const gz::sim::EntityComponentManager &_ecm) override;
-
-    public: void RemoveSensorEntities(const gz::sim::EntityComponentManager &_ecm);
-
-    private:
-      std::unique_ptr<RTManager> rtManager;
-      std::unordered_map<gz::sim::Entity, std::shared_ptr<rtsensor::RtSensor>> entitySensorMap;
-
-  };
-
-  void WGPURtSensor::Configure(const gz::sim::Entity &_entity,
-                               const std::shared_ptr<const sdf::Element> &_sdf,
-                               gz::sim::EntityComponentManager &_ecm,
-                               gz::sim::EventManager &_eventMgr)
-  {
-    this->rtManager = std::make_unique<RTManager>();
-    this->rtManager->Initialize();
-  }
-
-  void WGPURtSensor::PreUpdate(const gz::sim::UpdateInfo &_info,
-                               gz::sim::EntityComponentManager &_ecm)
-  {
-    _ecm.EachNew<gz::sim::components::CustomSensor,
-                 gz::sim::components::ParentEntity>(
-      [&](const gz::sim::Entity &_entity,
-          const gz::sim::components::CustomSensor *_custom,
-          const gz::sim::components::ParentEntity *_parent) -> bool
-      {
-        sdf::Sensor data = _custom->Data();
-
-        if (data.Topic().empty())
-        {
-          data.SetTopic(gz::sim::scopedName(_entity, _ecm) + "/rt_sensor");
-        }
-
-        auto sensor = std::make_shared<rtsensor::RtSensor>();
-
-        if (!sensor->Load(data))
-        {
-          gzerr << "Failed to load RtSensor for entity [" << _entity << "]" << std::endl;
-          return true;
-        }
-        sensor->SetParentEntity(_parent->Data());
-
-        this->rtManager->CreateSensorRenderer(_entity, sensor);
-
-        this->entitySensorMap[_entity] = sensor;
-
-        return true;
-      });
-  }
-
-  void WGPURtSensor::PostUpdate(const gz::sim::UpdateInfo &_info,
-                                const gz::sim::EntityComponentManager &_ecm)
-  {
-    using std::chrono::high_resolution_clock;
-    if (_info.paused)
-    {
-      return;
+    if (data.Topic().empty()) {
+      data.SetTopic(gz::sim::scopedName(_entity, _ecm) + "/rt_sensor");
     }
 
-    if (!this->rtManager->IsSceneInitialized())
-    {
-      this->rtManager->BuildScene(_ecm);
+    auto sensor = std::make_shared < rtsensor::RtSensor > ();
+
+    if (!sensor->Load(data)) {
+      gzerr << "Failed to load RtSensor for entity [" << _entity << "]" << std::endl;
+      return true;
     }
+    sensor->SetParentEntity(_parent->Data());
 
-    bool shouldUpdate = false;
+    this->rtManager->CreateSensorRenderer(_entity, sensor);
 
-    for (auto const& [entityId, sensor] : this->entitySensorMap)
-    {
-      auto update_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-          std::chrono::duration<double>(1.0 / sensor->UpdateRate()));
+    this->entitySensorMap[_entity] = sensor;
 
-      if ((_info.simTime - sensor->lastUpdateTime) >= update_period)
-      {
-        shouldUpdate = true;
-        sensor->lastUpdateTime = _info.simTime;
+    return true;
+  });
+}
 
-        RTManager::RenderJob job;
-        job.entityId = entityId;
-        job.sensor = sensor;
-        job.sensorWorldPose = gz::sim::worldPose(sensor->ParentEntity(), _ecm);
-        job.updateInfo = _info;
+void WGPURtSensor::PostUpdate(
+  const gz::sim::UpdateInfo & _info,
+  const gz::sim::EntityComponentManager & _ecm)
+{
+  using std::chrono::high_resolution_clock;
+  if (_info.paused) {
+    return;
+  }
 
-        auto parentNameComp = _ecm.Component<gz::sim::components::Name>(sensor->ParentEntity());
-        if(parentNameComp)
-        {
-          job.parentFrameId = parentNameComp->Data();
-        }
-        this->rtManager->QueueRenderJob(job);
+  if (!this->rtManager->IsSceneInitialized()) {
+    this->rtManager->BuildScene(_ecm);
+  }
+
+  bool shouldUpdate = false;
+
+  for (auto const &[entityId, sensor] : this->entitySensorMap) {
+    auto update_period = std::chrono::duration_cast < std::chrono::steady_clock::duration > (
+      std::chrono::duration < double > (1.0 / sensor->UpdateRate()));
+
+    if ((_info.simTime - sensor->lastUpdateTime) >= update_period) {
+      shouldUpdate = true;
+      sensor->lastUpdateTime = _info.simTime;
+
+      RTManager::RenderJob job;
+      job.entityId = entityId;
+      job.sensor = sensor;
+      job.sensorWorldPose = gz::sim::worldPose(sensor->ParentEntity(), _ecm);
+      job.updateInfo = _info;
+
+      auto parentNameComp = _ecm.Component < gz::sim::components::Name > (sensor->ParentEntity());
+      if(parentNameComp) {
+        job.parentFrameId = parentNameComp->Data();
       }
-    }
-
-    if (shouldUpdate)
-    {
-      this->rtManager->UpdateTransforms(_ecm);
+      this->rtManager->QueueRenderJob(job);
     }
   }
 
-  void WGPURtSensor::RemoveSensorEntities(
-      const gz::sim::EntityComponentManager &_ecm)
+  if (shouldUpdate) {
+    this->rtManager->UpdateTransforms(_ecm);
+  }
+}
+
+void WGPURtSensor::RemoveSensorEntities(
+  const gz::sim::EntityComponentManager & _ecm)
+{
+  _ecm.EachRemoved < gz::sim::components::CustomSensor > (
+    [this](const gz::sim::Entity & _entity,
+    const auto *)->bool
   {
-    _ecm.EachRemoved<gz::sim::components::CustomSensor>(
-      [this](const gz::sim::Entity &_entity,
-          const auto*) -> bool
-      {
-        if (this->entitySensorMap.count(_entity))
-        {
-          this->rtManager->RemoveSensorRenderer(_entity);
-          this->entitySensorMap.erase(_entity);
-          gzmsg << "Removed RtSensor for entity [" << _entity << "]." << std::endl;
-        }
-        return true;
-      });
-  }
+    if (this->entitySensorMap.count(_entity)) {
+      this->rtManager->RemoveSensorRenderer(_entity);
+      this->entitySensorMap.erase(_entity);
+      gzmsg << "Removed RtSensor for entity [" << _entity << "]." << std::endl;
+    }
+    return true;
+  });
+}
 }
 
 GZ_ADD_PLUGIN(wgpu_sensor::WGPURtSensor,

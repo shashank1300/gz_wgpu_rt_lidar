@@ -16,29 +16,15 @@ Summary of current features:
 ## Requirements
 This package is designed to be built on ROS 2 Jazzy. To build and run this project, you will need:
 - A recent version of [Rust](https://www.rust-lang.org/tools/install).
-- [rerun](https://rerun.io/docs/getting-started/installing-viewer#installing-the-viewer) (v0.22.1) installed via `cargo install rerun-cli@0.22.1`.
 - A non-apple ray-tracing enabled GPU (NVIDIA RTX or above, AMD RX6000 and above, Steam Deck or Intel Battlemage)
 
 ## Supported platform
 This library is only available as a source build on ROS2 Jazzy.
 
-## Distrobox usage
-I personally love using Distrobox. It might be overkill, but it is great for quickly getting things going. I can spin up specific ROS 2 versions with much ease on a linux system. If you are building in distrobox and have an Nvidia Graphics card, you will need the `--nvidia` flags.
-
-
-## Rust Analyzer Config
-For code completion to work in VS Code you may need to specify the following
-```json
-{
-    "rust-analyzer.linkedProjects": [
-        "gz_wgpu_rt_lidar/src/rust_system/Cargo.toml"
-    ]
-}
-```
 ## Build from source
 On ROS2 Jazzy:
 ```bash
-git clone git@github.com:arjo129/gz_wgpu_rt_lidar.git
+git clone https://github.com/arjo129/gz_wgpu_rt_lidar.git
 cd gz_wgpu_rt_lidar
 rosdep install --from-paths gz_wgpu_rt_lidar
 colcon build
@@ -47,6 +33,7 @@ Important: Before running Gazebo, ensure your system can find the compiled plugi
 ```bash
 source install/setup.bash
 ```
+
 ## Running the Examples
 After building and sourcing your workspace, you can run an example SDF file:
 ```bash
@@ -70,6 +57,9 @@ You can then visualize these topics in RViz2 or any other ROS 2 visualization to
 ros2 topic list  # Verify topics are available
 rviz2  # Visualize the sensor data
 ```
+If you configure rviz correctly you should get something like:
+![rviz_demo](images/rviz_demo.png)
+
 
 ## Screenshots
 
@@ -126,8 +116,8 @@ Depth Camera:
 ```
 LidAR Sensor:
 ```xml
-      <!-- Custom LiDAR Sensor -->
-<sensor name="my_rt_lidar" type="custom" gz:type="rt_lidar">
+   <!-- Custom LiDAR Sensor -->
+   <sensor name="my_rt_lidar" type="custom" gz:type="rt_lidar">
    <always_on>1</always_on>
    <update_rate>10</update_rate>
    <topic>/my_robot/lidar/points</topic>
@@ -152,12 +142,3 @@ LidAR Sensor:
 </sensor>
 ```
 Note: These custom sensors should be placed within a model's link in your SDF file.
-
-## TODOs
-- **Performance**: Move all rendering and data publishing to a dedicated worker thread.
-
-- **ROS 2 Integration**: Finalize the standard robot_state_publisher workflow to provide stable TF data for RViz.
-
-- **Full SDF Support**: Add ray-tracing support for all standard SDF geometries (cylinders, spheres, etc.).
-
-- **Advanced Features**: Implement realistic noise models and intensity returns based on material properties.
