@@ -18,10 +18,12 @@
 #include <gz/plugin/Register.hh>
 
 #include <gz/sim/components/CustomSensor.hh>
+#include <gz/sim/components/Geometry.hh>
+#include <gz/sim/components/Model.hh>
 #include <gz/sim/components/Name.hh>
 #include <gz/sim/components/ParentEntity.hh>
-#include <gz/sim/components/Geometry.hh>
 #include <gz/sim/components/Visual.hh>
+
 #include <gz/sim/System.hh>
 #include <gz/sim/Util.hh>
 
@@ -141,7 +143,7 @@ void WGPURtSensor::PostUpdate(
   if (!this->rtManager->IsSceneInitialized()){
     this->rtManager->BuildScene(_ecm);
   }
-  else if (this->rtManager->IsSceneDirty()){
+  else if (this->rtManager->NeedsRebuild(_ecm) || this->rtManager->IsSceneDirty()){
     this->rtManager->RebuildScene(_ecm);
   }
 

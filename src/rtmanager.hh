@@ -23,6 +23,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <shared_mutex>
 #include <thread>
 #include <unordered_map>
 
@@ -78,17 +79,20 @@ public:
   /// \brief Removes a sensor renderer when the entity is removed
   void RemoveSensorRenderer(const gz::sim::Entity & _entity);
 
-    /// \brief Checks if the scene has been built
-    bool IsSceneInitialized() const;
+  /// \brief Checks if the scene has been built
+  bool IsSceneInitialized() const;
 
-    /// \brief Mark the scene as dirty, requiring a rebuild
+  /// \brief Mark the scene as dirty, requiring a rebuild
     void MarkSceneDirty();
 
-    /// \brief Check if the scene is dirty
-    bool IsSceneDirty() const;
+  /// \brief Check if the scene is dirty
+  bool IsSceneDirty() const;
 
-    /// \brief Rebuild the scene (clears and rebuilds from scratch)
-    void RebuildScene(const gz::sim::EntityComponentManager &_ecm);
+  /// \brief Determines if the scene needs to be rebuilt due to entity changes
+  bool NeedsRebuild(const gz::sim::EntityComponentManager &_ecm) const;
+
+  /// \brief Rebuild the scene (clears and rebuilds from scratch)
+  void RebuildScene(const gz::sim::EntityComponentManager &_ecm);
 
   private:
     /// \brief Converts SDF geometry to a format the Rust backend can use
@@ -135,5 +139,8 @@ public:
 
     /// \brief Flag indicating if the scene needs to be rebuilt due to entity changes
     bool sceneDirty = false;
+
+    /// \brief Mutex to protect scene data during updates and rendering
+    mutable std::shared_mutex sceneMutex;
 };
 }
