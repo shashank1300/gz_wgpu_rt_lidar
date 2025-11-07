@@ -123,9 +123,10 @@ namespace wgpu_sensor
       }
 
       {
-        std::shared_lock<std::shared_mutex> sceneLock(this->sceneMutex);
-        if (!this->rt_scene)
+        std::shared_lock < std::shared_mutex > sceneLock(this->sceneMutex);
+        if (!this->rt_scene) {
           continue;
+        }
 
         auto view_matrix = create_view_matrix(
           static_cast < float > (job.sensorWorldPose.Pos().X()),
@@ -163,7 +164,8 @@ namespace wgpu_sensor
           if (it == this->rt_lidars.end() || !it->second) {return;}
           RtLidar *currentRtLidar = it->second;
 
-          RtPointCloud pointCloudData = render_lidar(currentRtLidar, this->rt_scene, this->rt_runtime,
+          RtPointCloud pointCloudData = render_lidar(currentRtLidar, this->rt_scene,
+            this->rt_runtime,
                                                    view_matrix);
 
           gz::msgs::PointCloudPacked msg;
@@ -253,9 +255,10 @@ namespace wgpu_sensor
     free_rt_scene_builder(rt_scene_builder);
 
     {
-      std::unique_lock<std::shared_mutex> lock(this->sceneMutex);
-      if (this->rt_scene != nullptr)
+      std::unique_lock < std::shared_mutex > lock(this->sceneMutex);
+      if (this->rt_scene != nullptr) {
         free_rt_scene(this->rt_scene);
+      }
       this->rt_scene = newScene;
     }
 
@@ -446,54 +449,56 @@ namespace wgpu_sensor
     return this->sceneDirty;
   }
 
-  bool RTManager::NeedsRebuild(const gz::sim::EntityComponentManager &_ecm) const
+  bool RTManager::NeedsRebuild(const gz::sim::EntityComponentManager & _ecm) const
   {
-    std::unordered_set<gz::sim::Entity> current;
-    _ecm.Each<gz::sim::components::Visual, gz::sim::components::Geometry>(
-      [&](const gz::sim::Entity _e, const auto*, const auto*) -> bool{
-        current.insert(_e);
-        return true;
+    std::unordered_set < gz::sim::Entity > current;
+    _ecm.Each < gz::sim::components::Visual, gz::sim::components::Geometry > (
+      [&](const gz::sim::Entity _e, const auto *, const auto *)->bool{
+      current.insert(_e);
+      return true;
     });
 
-    if (current.size() != this->gz_entity_to_rt_instance.size())
-    return true;
+    if (current.size() != this->gz_entity_to_rt_instance.size()) {
+      return true;
+    }
 
-    for (const auto &kv : this->gz_entity_to_rt_instance)
-      if (!current.count(kv.first))
+    for (const auto & kv : this->gz_entity_to_rt_instance) {
+      if (!current.count(kv.first)) {
         return true;
+      }
+    }
 
     return false;
   }
 
-  void RTManager::RebuildScene(const gz::sim::EntityComponentManager &_ecm)
+  void RTManager::RebuildScene(const gz::sim::EntityComponentManager & _ecm)
   {
     gzmsg << "RTManager: Rebuilding ray-tracing scene due to entity changes." << std::endl;  // info [file:2]
 
     this->gz_entity_to_rt_instance.clear();                                                   // drop stale handles [file:2]
 
     {
-      std::unique_lock<std::mutex> ql(this->queueMutex);
-      std::queue<RenderJob> empty; std::swap(this->jobQueue, empty);                         // clear queue [file:2]
+      std::unique_lock < std::mutex > ql(this->queueMutex);
+      std::queue < RenderJob > empty; std::swap(this->jobQueue, empty);                         // clear queue [file:2]
     }
 
     auto rt_scene_builder = create_rt_scene_builder();                                         // fresh builder [file:2]
-    _ecm.Each<gz::sim::components::Visual, gz::sim::components::Geometry>(
-    [&](const gz::sim::Entity entity,
-        const auto*,
-        const auto *geometry) -> bool
+    _ecm.Each < gz::sim::components::Visual, gz::sim::components::Geometry > (
+      [&](const gz::sim::Entity entity,
+      const auto *,
+      const auto *geometry)->bool
     {
       const auto geom = geometry->Data();                                                  // SDF geometry [file:2]
       auto mesh = this->convertSDFModelToWGPU(geom);                                       // build Mesh [file:2]
-      if (mesh != nullptr)
-      {
+      if (mesh != nullptr) {
         auto meshId = add_mesh(rt_scene_builder, mesh);                                      // add asset [file:2]
-        auto pose = _ecm.Component<gz::sim::components::Pose>(entity);                     // Pose [file:2]
-        if (pose)
-        {
+        auto pose = _ecm.Component < gz::sim::components::Pose > (entity);                     // Pose [file:2]
+        if (pose) {
           auto inst = create_instance_wrapper(
               meshId,
               pose->Data().Pos().X(), pose->Data().Pos().Y(), pose->Data().Pos().Z(),
-              pose->Data().Rot().X(), pose->Data().Rot().Y(), pose->Data().Rot().Z(), pose->Data().Rot().W()); // FFI [file:2]
+              pose->Data().Rot().X(), pose->Data().Rot().Y(), pose->Data().Rot().Z(),
+            pose->Data().Rot().W());                                                                           // FFI [file:2]
           auto instId = add_instance(rt_scene_builder, inst);                                // add instance [file:2]
           this->gz_entity_to_rt_instance[entity] = instId;                                  // map for transform updates [file:2]
           free_instance_wrapper(inst);                                                     // free wrapper [file:2]
@@ -507,9 +512,10 @@ namespace wgpu_sensor
     free_rt_scene_builder(rt_scene_builder);                                                   // builder no longer needed [file:2]
 
     {
-      std::unique_lock<std::shared_mutex> lock(this->sceneMutex);                            // write lock [file:2]
-      if (this->rt_scene != nullptr)
+      std::unique_lock < std::shared_mutex > lock(this->sceneMutex);                            // write lock [file:2]
+      if (this->rt_scene != nullptr) {
         free_rt_scene(this->rt_scene);                                                        // free old TLAS [file:2]
+      }
       this->rt_scene = newScene;                                                              // publish new scene [file:2]
       this->sceneDirty = false;                                                              // clear flag [file:2]
     }
