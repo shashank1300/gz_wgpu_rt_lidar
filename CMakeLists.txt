@@ -37,6 +37,25 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Corrosion)
 
 #============================================================================
+# Generate Rust bindings header using cbindgen
+find_program(CBINDGEN cbindgen)
+if(CBINDGEN)
+  add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/rust_bindings.h
+    COMMAND ${CBINDGEN} --config ${CMAKE_CURRENT_SOURCE_DIR}/src/rust_system/cbindgen.toml
+            --crate rust_system
+            --output ${CMAKE_CURRENT_SOURCE_DIR}/src/rust_bindings.h
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/rust_system
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/rust_system/src/lib.rs
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/rust_system/cbindgen.toml
+    COMMENT "Generating Rust bindings header using cbindgen"
+  )
+  add_custom_target(rust_bindings DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/rust_bindings.h)
+else()
+  message(WARNING "cbindgen not found, rust_bindings.h will not be generated")
+endif()
+
+#============================================================================
 # Hooks
 ament_environment_hooks("hooks/resource_paths.dsv.in")
 ament_environment_hooks("hooks/resource_paths.sh")
@@ -61,6 +80,10 @@ target_link_libraries(wgpu_rt_sensor PUBLIC
         gz-sensors::gz-sensors
 )
 
+if(CBINDGEN)
+  add_dependencies(wgpu_rt_sensor rust_bindings)
+endif()
+
 install(TARGETS wgpu_rt_sensor DESTINATION lib)
 
 #============================================================================
@@ -70,7 +93,11 @@ if(BUILD_TESTING)
   # Uses gazebo style
   list(APPEND AMENT_LINT_AUTO_EXCLUDE
   ament_cmake_cpplint
-  copyright
+  ament_cmake_copyright
+  )
+  # Exclude generated files from linting
+  set(AMENT_LINT_AUTO_FILE_EXCLUDE
+    src/rust_bindings.h
   )
   ament_lint_auto_find_test_dependencies()
 endif()

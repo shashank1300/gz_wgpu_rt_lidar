@@ -316,10 +316,11 @@ pub extern "C" fn create_view_matrix(
     qx: f32,
     qy: f32,
     qz: f32,
+    qw: f32,
 ) -> *mut ViewMatrix {
     Box::into_raw(Box::new(ViewMatrix {
         view: glam::Mat4::from_translation(glam::Vec3::new(x, y, z))
-            * glam::Mat4::from_quat(glam::Quat::from_xyzw(qx, qy, qz, 1.0)),
+            * glam::Mat4::from_quat(glam::Quat::from_xyzw(qx, qy, qz, qw)),
     }))
 }
 
@@ -456,7 +457,7 @@ struct Rt3DLidarConfiguration {
 }
 
 #[no_mangle]
-fn new_lidar_config(
+pub extern "C" fn new_lidar_config(
     num_lasers: usize,
     num_steps: usize,
     min_vertical_angle: f32,
@@ -479,7 +480,7 @@ fn new_lidar_config(
 }
 
 #[no_mangle]
-fn free_lidar_config(ptr: *mut Rt3DLidarConfiguration) {
+pub extern "C" fn free_lidar_config(ptr: *mut Rt3DLidarConfiguration) {
     if ptr.is_null() {
         return;
     }
@@ -516,7 +517,7 @@ struct RtPointCloud {
 }
 
 #[no_mangle]
-fn free_pointcloud(ptr: *mut RtPointCloud) {
+pub extern "C" fn free_pointcloud(ptr: *mut RtPointCloud) {
     if ptr.is_null() {
         return;
     }
